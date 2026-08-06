@@ -2,33 +2,87 @@
   "$schema": "https://raw.githubusercontent.com/macel94/belacca-status/main/status.schema.json",
   "schema_version": "belacca.public-status.v2",
   "sanitized": true,
-  "publication_state": "not_configured",
-  "status": "unknown",
-  "summary": "No GitHub-hosted external status observation has been published yet.",
-  "observation_id": null,
-  "observed_at": null,
-  "updated_at": null,
-  "evidence_timestamp": null,
-  "valid_until": null,
+  "publication_state": "published",
+  "status": "operational",
+  "summary": "All critical public checks are passing.",
+  "observation_id": "31106828949",
+  "observed_at": "2026-08-06T13:38:09.438Z",
+  "updated_at": "2026-08-06T13:38:09.438Z",
+  "evidence_timestamp": "2026-08-06T13:38:09.438Z",
+  "valid_until": "2026-08-06T15:38:09.438Z",
   "publisher": {
-    "name": null,
-    "source_reference": null
+    "name": "Belacca hourly status monitor",
+    "source_reference": "https://github.com/macel94/belacca-status/actions/runs/31106828949"
   },
-  "monitoring_policy": null,
+  "monitoring_policy": {
+    "id": "belacca-status-hourly-v1",
+    "approved_by": "Francesco Belacca",
+    "approved_at": "2026-08-06T00:00:00Z",
+    "runner": "GitHub-hosted Actions runner",
+    "interval": "1h",
+    "freshness_ttl": "2h",
+    "failure_threshold": 2,
+    "recovery_threshold": 2
+  },
   "uptime": {
     "state": "not_configured",
     "value": null,
     "window": "24h",
     "source_reference": null
   },
-  "components": [],
+  "components": [
+    {
+      "id": "portfolio",
+      "name": "Portfolio",
+      "critical": true,
+      "status": "operational",
+      "summary": "All configured external checks passed.",
+      "evidence_timestamp": "2026-08-06T13:38:09.438Z",
+      "duration_ms": 6156,
+      "source_references": [
+        "https://github.com/macel94/belacca-status/actions/runs/31106828949",
+        "https://github.com/macel94/belacca-status/tree/main/history#portfolio-health",
+        "https://github.com/macel94/belacca-status/tree/main/history#portfolio-homepage"
+      ]
+    },
+    {
+      "id": "pong",
+      "name": "Cloud Native Pong",
+      "critical": true,
+      "status": "operational",
+      "summary": "All configured external checks passed.",
+      "evidence_timestamp": "2026-08-06T13:38:09.438Z",
+      "duration_ms": 15140,
+      "source_references": [
+        "https://github.com/macel94/belacca-status/actions/runs/31106828949",
+        "https://github.com/macel94/belacca-status/tree/main/history#pong-health",
+        "https://github.com/macel94/cloudnativepong/commit/8702813ad984adaccacc448e7e3946bd047cbd7f",
+        "https://github.com/macel94/belacca-status/tree/main/history#pong-homepage",
+        "https://github.com/macel94/belacca-status/tree/main/history#pong-journey"
+      ]
+    },
+    {
+      "id": "analytics",
+      "name": "Analytics",
+      "critical": false,
+      "status": "operational",
+      "summary": "All configured external checks passed.",
+      "evidence_timestamp": "2026-08-06T13:38:09.438Z",
+      "duration_ms": 3512,
+      "source_references": [
+        "https://github.com/macel94/belacca-status/actions/runs/31106828949",
+        "https://github.com/macel94/belacca-status/tree/main/history#analytics-status"
+      ]
+    }
+  ],
   "incidents": [],
   "source_references": [
-    "https://github.com/macel94/belacca-status/blob/main/POLICY.md"
+    "https://github.com/macel94/belacca-status/actions/runs/31106828949",
+    "https://github.com/macel94/belacca-status/tree/main/history#platform"
   ],
   "notes": [
-    "This is the safe bootstrap artifact.",
-    "The first scheduled or manually dispatched GitHub Actions run replaces it with an observation.",
-    "No availability claim is made until fresh external evidence exists."
+    "Automated external evidence published under a human-approved monitoring policy.",
+    "This is an hourly observation from a GitHub-hosted runner, not multi-region monitoring.",
+    "The status page is hosted in the same single-VM cluster and may be unavailable during a complete VM outage."
   ]
 }
