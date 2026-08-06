@@ -75,12 +75,17 @@ test('uptime stays unconfigured until 24 sanitized observations exist', () => {
   assert.equal(ready.uptime.value, 100);
 });
 
-test('bootstrap artifact is valid but makes no claim', async () => {
+test('checked-in status artifact is valid for its publication state', async () => {
   const { readFile } = await import('node:fs/promises');
-  const bootstrap = JSON.parse(await readFile(new URL('../status.json', import.meta.url), 'utf8'));
-  assert.equal(validateStatus(bootstrap, { now: NOW }), true);
-  assert.equal(bootstrap.publication_state, 'not_configured');
-  assert.equal(bootstrap.status, 'unknown');
+  const artifact = JSON.parse(await readFile(new URL('../status.json', import.meta.url), 'utf8'));
+  assert.equal(validateStatus(artifact, { now: NOW }), true);
+  assert.ok(['not_configured', 'published'].includes(artifact.publication_state));
+  if (artifact.publication_state === 'not_configured') {
+    assert.equal(artifact.status, 'unknown');
+  } else {
+    assert.ok(['operational', 'degraded', 'incident', 'unknown'].includes(artifact.status));
+    assert.ok(artifact.observation_id);
+  }
 });
 
 test('validation rejects expired artifacts and accepts a fresh generated artifact', () => {
