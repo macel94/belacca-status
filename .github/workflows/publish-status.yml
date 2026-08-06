@@ -26,12 +26,12 @@ jobs:
       PONG_CHECKOUT_PATH: ${{ github.workspace }}/cloudnativepong-checkout
     steps:
       - name: Check out status repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Check out Pong synthetic runner
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: macel94/cloudnativepong
           ref: main
@@ -39,9 +39,9 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
 
       - name: Install Pong synthetic dependency
         working-directory: ${{ github.workspace }}/cloudnativepong-checkout
