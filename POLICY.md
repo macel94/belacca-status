@@ -14,8 +14,11 @@ single VM that hosts the platform:
   create/join/two-WebSocket/playing/cleanup journey from the Pong repository.
 - **Analytics**: `https://stats.belacca.com/status`.
 
-The dashboard is intentionally not monitored publicly because it requires an
-operator-managed identity and credentials.
+The dashboard, Flux UI, Dex alias, and portfolio redirect aliases are not
+monitored as independent applications. The complete supported-host inventory
+and canonicalization policy is maintained in the GitOps repository's
+[`docs/SITES.md`](https://github.com/macel94/belacca-gitops/blob/main/docs/SITES.md).
+The dashboard and Flux UI require operator-managed identity and credentials.
 
 ## Publication rules
 
