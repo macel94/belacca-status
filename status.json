@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/macel94/belacca-status/main/status.schema.json",
+  "schema_version": "belacca.public-status.v2",
+  "sanitized": true,
+  "publication_state": "not_configured",
+  "status": "unknown",
+  "summary": "No GitHub-hosted external status observation has been published yet.",
+  "observation_id": null,
+  "observed_at": null,
+  "updated_at": null,
+  "evidence_timestamp": null,
+  "valid_until": null,
+  "publisher": {
+    "name": null,
+    "source_reference": null
+  },
+  "monitoring_policy": null,
+  "uptime": {
+    "state": "not_configured",
+    "value": null,
+    "window": "24h",
+    "source_reference": null
+  },
+  "components": [],
+  "incidents": [],
+  "source_references": [
+    "https://github.com/macel94/belacca-status/blob/main/POLICY.md"
+  ],
+  "notes": [
+    "This is the safe bootstrap artifact.",
+    "The first scheduled or manually dispatched GitHub Actions run replaces it with an observation.",
+    "No availability claim is made until fresh external evidence exists."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "belacca-status",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/status.test.mjs",
+    "check": "node scripts/validate-status.mjs status.json"
+  }
+}
