@@ -1,0 +1,56 @@
+{
+  "schema_version": "belacca.observation.v1",
+  "observation_id": "31218073243",
+  "observed_at": "2026-08-07T20:57:44.161Z",
+  "status": "operational",
+  "critical_pass": true,
+  "checks": [
+    {
+      "id": "portfolio-health",
+      "passed": true,
+      "duration_ms": 558
+    },
+    {
+      "id": "portfolio-homepage",
+      "passed": true,
+      "duration_ms": 136
+    },
+    {
+      "id": "pong-health",
+      "passed": true,
+      "duration_ms": 8447
+    },
+    {
+      "id": "pong-homepage",
+      "passed": true,
+      "duration_ms": 271
+    },
+    {
+      "id": "pong-journey",
+      "passed": true,
+      "duration_ms": 9423
+    },
+    {
+      "id": "analytics-status",
+      "passed": true,
+      "duration_ms": 832
+    }
+  ],
+  "components": [
+    {
+      "id": "portfolio",
+      "status": "operational",
+      "raw_pass": true
+    },
+    {
+      "id": "pong",
+      "status": "operational",
+      "raw_pass": true
+    },
+    {
+      "id": "analytics",
+      "status": "operational",
+      "raw_pass": true
+    }
+  ]
+}
