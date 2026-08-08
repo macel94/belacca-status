@@ -22,6 +22,10 @@ const COMPONENTS = {
 
 const MAX_BODY_BYTES = 128 * 1024;
 const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_CHECK_ATTEMPTS = 3;
+const MAX_CHECK_ATTEMPTS = 5;
+const DEFAULT_RETRY_DELAY_MS = 1_000;
+const MAX_RETRY_DELAY_MS = 30_000;
 const PONG_TIMEOUT_MS = 100_000;
 const UPTIME_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MIN_UPTIME_OBSERVATIONS = 24;
@@ -35,6 +39,24 @@ export class MonitorError extends Error {
 
 function iso(value = Date.now()) {
   return new Date(value).toISOString();
+}
+
+function boundedInteger(raw, fallback, minimum, maximum) {
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) && value >= minimum && value <= maximum ? value : fallback;
+}
+
+function retryOptions(env) {
+  return {
+    attempts: boundedInteger(env.STATUS_CHECK_ATTEMPTS, DEFAULT_CHECK_ATTEMPTS, 1, MAX_CHECK_ATTEMPTS),
+    retryDelayMs: boundedInteger(env.STATUS_RETRY_DELAY_MS, DEFAULT_RETRY_DELAY_MS, 0, MAX_RETRY_DELAY_MS),
+  };
+}
+
+async function waitBeforeRetry(delayMs) {
+  if (delayMs <= 0) return;
+  await new Promise((resolveWait) => setTimeout(resolveWait, delayMs));
 }
 
 function parseArgs(argv) {
@@ -83,30 +105,36 @@ async function readResponseBody(response, label) {
   return Buffer.concat(chunks, size).toString('utf8');
 }
 
-async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeoutMs, observedAt, env }) {
+async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeoutMs, observedAt, env, attempts, retryDelayMs }) {
   const started = Date.now();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let passed = false;
   let failure = '';
-  try {
-    const response = await fetchImpl(url, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: {
-        accept: 'application/json, text/plain, text/html;q=0.9',
-        'user-agent': 'belacca-status-monitor/1',
-      },
-      signal: controller.signal,
-    });
-    const body = await readResponseBody(response, name);
-    passed = response.ok && condition(body, response);
-    if (!passed) failure = 'response did not satisfy the configured check';
-  } catch (error) {
-    failure = error?.name === 'AbortError' || controller.signal.aborted ? 'request timed out' : 'request failed';
-  } finally {
-    clearTimeout(timer);
+  let attempt = 0;
+  for (attempt = 1; attempt <= attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetchImpl(url, {
+        method: 'GET',
+        redirect: 'follow',
+        headers: {
+          accept: 'application/json, text/plain, text/html;q=0.9',
+          'user-agent': 'belacca-status-monitor/1',
+        },
+        signal: controller.signal,
+      });
+      const body = await readResponseBody(response, name);
+      passed = response.ok && condition(body, response);
+      if (!passed) failure = 'response did not satisfy the configured check';
+    } catch (error) {
+      failure = error?.name === 'AbortError' || controller.signal.aborted ? 'request timed out' : 'request failed';
+    } finally {
+      clearTimeout(timer);
+    }
+    if (passed || attempt === attempts) break;
+    await waitBeforeRetry(retryDelayMs * attempt);
   }
+  const attemptLabel = `${attempt} attempt${attempt === 1 ? '' : 's'}`;
   return {
     id,
     name,
@@ -114,7 +142,7 @@ async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeo
     passed,
     duration_ms: Math.min(Date.now() - started, 120_000),
     evidence_timestamp: observedAt,
-    summary: passed ? 'External check passed.' : `External check failed: ${failure || 'check condition failed'}.`,
+    summary: passed ? `External check passed${attempt > 1 ? ` after ${attemptLabel}` : ''}.` : `External check failed after ${attemptLabel}: ${failure || 'check condition failed'}.`,
     source_references: sourceReferences(env, id),
   };
 }
@@ -145,12 +173,19 @@ function runProcess(command, args, { env, timeoutMs }) {
   });
 }
 
-async function runPongJourney({ script, baseURL, env, observedAt, runProcessImpl = runProcess }) {
+async function runPongJourney({ script, baseURL, env, observedAt, runProcessImpl = runProcess, attempts, retryDelayMs }) {
   const started = Date.now();
-  const result = await runProcessImpl(process.execPath, [resolve(script)], {
-    env: { ...env, SYNTHETIC_BASE_URL: baseURL, SYNTHETIC_TIMEOUT_MS: '20000', SYNTHETIC_REQUEST_TIMEOUT_MS: '8000' },
-    timeoutMs: PONG_TIMEOUT_MS,
-  });
+  let result;
+  let attempt = 0;
+  for (attempt = 1; attempt <= attempts; attempt += 1) {
+    result = await runProcessImpl(process.execPath, [resolve(script)], {
+      env: { ...env, SYNTHETIC_BASE_URL: baseURL, SYNTHETIC_TIMEOUT_MS: '20000', SYNTHETIC_REQUEST_TIMEOUT_MS: '8000' },
+      timeoutMs: PONG_TIMEOUT_MS,
+    });
+    if (result.passed === true || attempt === attempts) break;
+    await waitBeforeRetry(retryDelayMs * attempt);
+  }
+  const attemptLabel = `${attempt} attempt${attempt === 1 ? '' : 's'}`;
   return {
     id: 'pong-journey',
     name: 'Pong two-player journey',
@@ -158,7 +193,9 @@ async function runPongJourney({ script, baseURL, env, observedAt, runProcessImpl
     passed: result.passed === true,
     duration_ms: Math.min(Date.now() - started, 120_000),
     evidence_timestamp: observedAt,
-    summary: result.passed === true ? 'External two-player WebSocket journey passed.' : `External two-player WebSocket journey failed: ${result.failure}.`,
+    summary: result.passed === true
+      ? `External two-player WebSocket journey passed${attempt > 1 ? ` after ${attemptLabel}` : ''}.`
+      : `External two-player WebSocket journey failed after ${attemptLabel}: ${result.failure}.`,
     source_references: sourceReferences(env, 'pong-journey'),
   };
 }
@@ -203,8 +240,9 @@ async function observe({ env = process.env, fetchImpl = globalThis.fetch, runPro
   if (!pongScript) throw new MonitorError('pong synthetic script is required');
   const observedAt = iso(now);
   const checks = [];
+  const { attempts, retryDelayMs } = retryOptions(env);
   for (const definition of buildCheckDefinitions(env)) {
-    checks.push(await fetchCheck({ ...definition, fetchImpl, timeoutMs: Number(env.STATUS_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS, observedAt, env }));
+    checks.push(await fetchCheck({ ...definition, fetchImpl, timeoutMs: Number(env.STATUS_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS, observedAt, env, attempts, retryDelayMs }));
     if (definition.id === 'pong-homepage') {
       checks.push(await runPongJourney({
         script: pongScript,
@@ -212,6 +250,8 @@ async function observe({ env = process.env, fetchImpl = globalThis.fetch, runPro
         env,
         observedAt,
         runProcessImpl,
+        attempts,
+        retryDelayMs,
       }));
     }
   }

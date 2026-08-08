@@ -23,6 +23,7 @@ The dashboard and Flux UI require operator-managed identity and credentials.
 ## Publication rules
 
 - Runs are scheduled hourly and can be started manually.
+- Each external check is retried up to three times with a short increasing delay; a failure is recorded only when all attempts fail.
 - `operational` means all critical checks passed.
 - `degraded` means a non-critical component failed.
 - `incident` means a critical component failed.

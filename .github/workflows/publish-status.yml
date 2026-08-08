@@ -24,6 +24,8 @@ jobs:
       PONG_URL: https://pong.belacca.com
       ANALYTICS_URL: https://stats.belacca.com
       PONG_CHECKOUT_PATH: ${{ github.workspace }}/cloudnativepong-checkout
+      STATUS_CHECK_ATTEMPTS: 3
+      STATUS_RETRY_DELAY_MS: 1000
     steps:
       - name: Check out status repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,33 +47,88 @@ jobs:
 
       - name: Install Pong synthetic dependency
         working-directory: ${{ github.workspace }}/cloudnativepong-checkout
-        run: npm ci --ignore-scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if npm ci --ignore-scripts; then
+              exit 0
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              echo "Dependency installation attempt $attempt failed; retrying."
+              sleep "$attempt"
+            fi
+          done
+          exit 1
 
       - name: Validate status monitor
         run: npm test
+
+      - name: Synchronize status branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
 
       - name: Generate and commit status observation
         id: publish
         shell: bash
         run: |
-          set +e
+          set -euo pipefail
+          monitor_status=0
+          validation_status=0
+          publish_status=0
+
           export PONG_COMMIT="$(git -C "$PONG_CHECKOUT_PATH" rev-parse HEAD)"
-          node scripts/monitor.mjs \
+          if node scripts/monitor.mjs \
             --pong-script "$PONG_CHECKOUT_PATH/scripts/synthetic-check.mjs" \
             --output status.json \
-            --history-dir history
-          monitor_status=$?
-          node scripts/validate-status.mjs status.json
-          validation_status=$?
+            --history-dir history; then
+            :
+          else
+            monitor_status=$?
+          fi
+          if node scripts/validate-status.mjs status.json; then
+            :
+          else
+            validation_status=$?
+          fi
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add status.json history
           if git diff --cached --quiet; then
             echo 'No status changes to commit.'
+          elif git commit -m "status: publish observation ${STATUS_OBSERVATION_ID}"; then
+            for attempt in 1 2 3; do
+              if git push origin HEAD:main; then
+                publish_status=0
+                break
+              else
+                publish_status=$?
+              fi
+              if [[ "$attempt" -lt 3 ]]; then
+                echo "Push attempt $attempt failed; rebasing on the latest main before retrying."
+                git fetch origin main
+                if ! git rebase -X theirs origin/main; then
+                  echo 'Could not rebase the observation onto the latest main.' >&2
+                  git rebase --abort || true
+                fi
+                sleep "$attempt"
+              fi
+            done
           else
-            git commit -m "status: publish observation ${STATUS_OBSERVATION_ID}"
-            git push
+            publish_status=$?
           fi
-          if [[ "$monitor_status" -ne 0 ]]; then exit "$monitor_status"; fi
-          exit "$validation_status"
+
+          if [[ "$monitor_status" -ne 0 ]]; then
+            echo "Status monitor failed with exit code $monitor_status." >&2
+          fi
+          if [[ "$validation_status" -ne 0 ]]; then
+            echo "Generated status validation failed with exit code $validation_status." >&2
+          fi
+          if [[ "$publish_status" -ne 0 ]]; then
+            echo "Status publication failed with exit code $publish_status." >&2
+          fi
+          (( monitor_status == 0 && validation_status == 0 && publish_status == 0 ))

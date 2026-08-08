@@ -94,6 +94,61 @@ test('validation rejects expired artifacts and accepts a fresh generated artifac
   assert.throws(() => validateStatus(artifact, { now: NOW + 3 * 3600000 }), /expired/);
 });
 
+test('transient external failures are retried before publishing', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'belacca-status-retry-'));
+  let portfolioHealthAttempts = 0;
+  let journeyAttempts = 0;
+  const fetchImpl = async (url) => {
+    if (url === 'https://francesco.belacca.com/health' && portfolioHealthAttempts++ === 0) {
+      throw new Error('transient network failure');
+    }
+    const body = url.endsWith('/health') ? 'ok\n' : url.includes('stats') ? JSON.stringify({ version: 'test', uptime: '1h' }) : '<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">';
+    return new Response(body, { status: 200 });
+  };
+  const result = await runMonitor({
+    env: { ...env, STATUS_OBSERVATION_ID: 'retry-run', STATUS_CHECK_ATTEMPTS: '3', STATUS_RETRY_DELAY_MS: '0' },
+    fetchImpl,
+    runProcessImpl: async () => ({ passed: ++journeyAttempts > 1 }),
+    now: NOW,
+    pongScript: '/tmp/pong.mjs',
+    output: join(directory, 'status.json'),
+    historyDir: join(directory, 'history'),
+  });
+
+  assert.equal(result.failed, false);
+  assert.equal(portfolioHealthAttempts, 2);
+  assert.equal(journeyAttempts, 2);
+  assert.equal(result.artifact.status, 'operational');
+});
+
+test('persistent failures remain failures after the retry budget is exhausted', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'belacca-status-persistent-failure-'));
+  let journeyAttempts = 0;
+  const fetchImpl = async (url) => {
+    const body = url.endsWith('/health') ? 'ok\n' : url.includes('stats') ? JSON.stringify({ version: 'test', uptime: '1h' }) : '<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">';
+    return new Response(body, { status: 200 });
+  };
+  const result = await runMonitor({
+    env: { ...env, STATUS_OBSERVATION_ID: 'persistent-failure', STATUS_CHECK_ATTEMPTS: '2', STATUS_RETRY_DELAY_MS: '0' },
+    fetchImpl,
+    runProcessImpl: async () => { journeyAttempts += 1; return { passed: false, failure: 'fixture failure' }; },
+    now: NOW,
+    pongScript: '/tmp/pong.mjs',
+    output: join(directory, 'status.json'),
+    historyDir: join(directory, 'history'),
+  });
+
+  assert.equal(result.failed, true);
+  assert.equal(journeyAttempts, 2);
+  assert.equal(result.artifact.components.find((item) => item.id === 'pong').status, 'degraded');
+});
+
 test('runMonitor writes only sanitized status and history records', async () => {
   const { mkdtemp, readFile: read } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
