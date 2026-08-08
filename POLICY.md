@@ -39,6 +39,26 @@ The dashboard and Flux UI require operator-managed identity and credentials.
 The policy itself is human-approved. Individual observations are automated and
 are not represented as manually reviewed incidents.
 
+## Internal availability objective
+
+Each supported public application (portfolio, Pong, and analytics) has an
+internal availability objective of 99% over a rolling 30-day window. The SLI is
+an hourly external-observation proxy: a component's `raw_pass` value in
+`history/*.json` is one good or bad slot. The resulting 30-day budget is 7.2
+hourly slots. This objective is not an SLA and does not provide service credits.
+
+The sanitized [`slo.json`](slo.json) artifact is generated from the durable
+history records and is separate from `status.json`, public incident state, and
+status hysteresis. A missing hourly slot, a missing component, or a malformed
+history record is unknown and never counts as success. Numeric SLO and
+error-budget values are withheld until the complete 720-slot window is valid.
+The source history contract remains `belacca.observation.v1`.
+
+A controlled-drill recovery objective under six minutes is a separate
+operational exercise. It is represented as policy context only and is excluded
+from the availability arithmetic; recovery-drill duration is not a good, bad,
+or unknown availability slot.
+
 ## Failure-domain boundary
 
 The runner and Git history are outside the native cluster, so an outage can

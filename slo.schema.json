@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/macel94/belacca-status/main/slo.schema.json",
+  "title": "Belacca sanitized SLO and error-budget evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "sanitized",
+    "publication_state",
+    "generated_at",
+    "policy",
+    "evaluation",
+    "services",
+    "source_references",
+    "notes"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "format": "uri-reference" },
+    "schema_version": { "const": "belacca.slo-evidence.v1" },
+    "sanitized": { "const": true },
+    "publication_state": { "const": "published" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "approved_by",
+        "approved_at",
+        "target",
+        "target_percent",
+        "window",
+        "window_hours",
+        "cadence",
+        "unknown_policy",
+        "sla",
+        "service_credits",
+        "recovery_objective",
+        "description"
+      ],
+      "properties": {
+        "id": { "const": "belacca-slo-99-v1" },
+        "approved_by": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "approved_at": { "type": "string", "format": "date-time" },
+        "target": { "const": 0.99 },
+        "target_percent": { "const": "99%" },
+        "window": { "const": "30d" },
+        "window_hours": { "const": 720 },
+        "cadence": { "const": "1h" },
+        "unknown_policy": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "sla": { "const": false },
+        "service_credits": { "const": false },
+        "recovery_objective": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "excluded_from_availability_arithmetic", "description"],
+          "properties": {
+            "type": { "const": "controlled_drill" },
+            "target": { "const": "under 6 minutes" },
+            "excluded_from_availability_arithmetic": { "const": true },
+            "description": { "type": "string", "minLength": 1, "maxLength": 500 }
+          }
+        },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window_start", "window_end", "expected_slots", "cadence", "source_history_schema", "valid_records", "invalid_records"],
+      "properties": {
+        "window_start": { "type": "string", "format": "date-time" },
+        "window_end": { "type": "string", "format": "date-time" },
+        "expected_slots": { "const": 720 },
+        "cadence": { "const": "1h" },
+        "source_history_schema": { "const": "belacca.observation.v1" },
+        "valid_records": { "type": "integer", "minimum": 0 },
+        "invalid_records": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "scope", "state", "target", "target_percent", "window", "cadence", "indicator", "evaluation_window", "counts", "coverage_percent", "sli_percent", "error_budget", "latest_evidence_timestamp", "source_references"],
+        "properties": {
+          "id": { "enum": ["portfolio", "pong", "analytics"] },
+          "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "scope": { "const": "public" },
+          "state": { "enum": ["not_configured", "insufficient_data", "reportable"] },
+          "target": { "const": 0.99 },
+          "target_percent": { "const": "99%" },
+          "window": { "const": "30d" },
+          "cadence": { "const": "1h" },
+          "indicator": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "evaluation_window": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["start", "end", "expected_slots"],
+            "properties": {
+              "start": { "type": "string", "format": "date-time" },
+              "end": { "type": "string", "format": "date-time" },
+              "expected_slots": { "const": 720 }
+            }
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["expected_slots", "observed_slots", "good_slots", "bad_slots", "unknown_slots", "duplicate_slots", "invalid_records"],
+            "properties": {
+              "expected_slots": { "const": 720 },
+              "observed_slots": { "type": "integer", "minimum": 0, "maximum": 720 },
+              "good_slots": { "type": "integer", "minimum": 0, "maximum": 720 },
+              "bad_slots": { "type": "integer", "minimum": 0, "maximum": 720 },
+              "unknown_slots": { "type": "integer", "minimum": 0, "maximum": 720 },
+              "duplicate_slots": { "type": "integer", "minimum": 0 },
+              "invalid_records": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "coverage_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+          "sli_percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+          "error_budget": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["allowed_bad_slots", "consumed_bad_slots", "consumed_percent", "remaining_bad_slots", "remaining_percent"],
+            "properties": {
+              "allowed_bad_slots": { "const": 7.2 },
+              "consumed_bad_slots": { "type": "integer", "minimum": 0, "maximum": 720 },
+              "consumed_percent": { "type": "number", "minimum": 0 },
+              "remaining_bad_slots": { "type": "number", "minimum": 0 },
+              "remaining_percent": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          },
+          "latest_evidence_timestamp": { "type": ["string", "null"], "format": "date-time" },
+          "source_references": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "type": "string", "minLength": 1, "maxLength": 500 } }
+        }
+      }
+    },
+    "source_references": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "type": "string", "minLength": 1, "maxLength": 500 } },
+    "notes": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 500 } }
+  }
+}

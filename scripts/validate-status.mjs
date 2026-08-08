@@ -1,11 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
+import { validateJsonSchema } from './schema-validation.mjs';
 
 const fail = (message) => { throw new Error(message); };
 const isDate = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value));
 const nonEmpty = (value, max = 500) => typeof value === 'string' && value.length > 0 && value.length <= max;
 
 export function validateStatus(data, { now = Date.now(), allowExpired = false } = {}) {
+  validateJsonSchema(data, 'status');
   if (!data || typeof data !== 'object' || Array.isArray(data)) fail('status must be an object');
   if (data.schema_version !== 'belacca.public-status.v2') fail('unsupported schema_version');
   if (data.sanitized !== true) fail('status is not sanitized');

@@ -13,6 +13,27 @@ const env = {
   GITHUB_RUN_ID: '123',
 };
 
+const BOOTSTRAP = {
+  $schema: 'https://raw.githubusercontent.com/macel94/belacca-status/main/status.schema.json',
+  schema_version: 'belacca.public-status.v2',
+  sanitized: true,
+  publication_state: 'not_configured',
+  status: 'unknown',
+  summary: 'No GitHub-hosted external status observation has been published yet.',
+  observation_id: null,
+  observed_at: null,
+  updated_at: null,
+  evidence_timestamp: null,
+  valid_until: null,
+  publisher: { name: null, source_reference: null },
+  monitoring_policy: null,
+  uptime: { state: 'not_configured', value: null, window: '24h', source_reference: null },
+  components: [],
+  incidents: [],
+  source_references: ['https://github.com/macel94/belacca-status/blob/main/POLICY.md'],
+  notes: ['This is the safe bootstrap artifact.'],
+};
+
 function checks({ portfolio = true, pong = true, analytics = true } = {}) {
   return [
     { id: 'portfolio-health', name: 'Portfolio health', critical: true, passed: portfolio, duration_ms: 10, evidence_timestamp: new Date(NOW).toISOString(), source_references: ['https://example.test/portfolio-health'] },
@@ -73,6 +94,17 @@ test('uptime stays unconfigured until 24 sanitized observations exist', () => {
   const ready = buildArtifact({ observationID: 'u2', observedAt: new Date(NOW + 3600000).toISOString(), checks: checks(), history: [...history, historyRecord(NOW, {})], env }).artifact;
   assert.equal(ready.uptime.state, 'reported');
   assert.equal(ready.uptime.value, 100);
+});
+
+test('bootstrap and published status artifacts satisfy the declared schema', async () => {
+  assert.equal(validateStatus(BOOTSTRAP), true);
+  const missingUptime = structuredClone(BOOTSTRAP);
+  delete missingUptime.uptime;
+  assert.throws(() => validateStatus(missingUptime), /JSON Schema validation/);
+
+  const published = buildArtifact({ observationID: 'schema-1', observedAt: new Date(NOW).toISOString(), checks: checks(), history: [], env }).artifact;
+  published.extra = true;
+  assert.throws(() => validateStatus(published), /JSON Schema validation/);
 });
 
 test('checked-in status artifact is valid for its publication state', async () => {

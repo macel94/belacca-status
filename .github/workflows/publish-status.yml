@@ -61,6 +61,9 @@ jobs:
           done
           exit 1
 
+      - name: Install status validation dependency
+        run: npm ci --ignore-scripts
+
       - name: Validate status monitor
         run: npm test
 
@@ -77,7 +80,10 @@ jobs:
         run: |
           set -euo pipefail
           monitor_status=0
-          validation_status=0
+          status_generation_status=0
+          status_validation_status=0
+          slo_generation_status=0
+          slo_validation_status=0
           publish_status=0
 
           export PONG_COMMIT="$(git -C "$PONG_CHECKOUT_PATH" rev-parse HEAD)"
@@ -89,15 +95,42 @@ jobs:
           else
             monitor_status=$?
           fi
-          if node scripts/validate-status.mjs status.json; then
+          if [[ "$monitor_status" -ne 0 && "$monitor_status" -ne 1 ]]; then
+            status_generation_status=$monitor_status
+          fi
+          if [[ "$status_generation_status" -eq 0 ]]; then
+            if node scripts/validate-status.mjs status.json; then
+              :
+            else
+              status_validation_status=$?
+            fi
+          else
+            status_validation_status=1
+          fi
+
+          if node scripts/slo-evidence.mjs --history-dir history --output slo.json; then
             :
           else
-            validation_status=$?
+            slo_generation_status=$?
+          fi
+          if [[ "$slo_generation_status" -eq 0 ]]; then
+            if node scripts/validate-slo.mjs slo.json; then
+              :
+            else
+              slo_validation_status=$?
+            fi
+          else
+            slo_validation_status=1
+          fi
+
+          if (( status_generation_status != 0 || status_validation_status != 0 || slo_generation_status != 0 || slo_validation_status != 0 )); then
+            echo 'Refusing to stage or commit invalid generated artifacts.' >&2
+            exit 1
           fi
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add status.json history
+          git add status.json history slo.json
           if git diff --cached --quiet; then
             echo 'No status changes to commit.'
           elif git commit -m "status: publish observation ${STATUS_OBSERVATION_ID}"; then
@@ -125,10 +158,19 @@ jobs:
           if [[ "$monitor_status" -ne 0 ]]; then
             echo "Status monitor failed with exit code $monitor_status." >&2
           fi
-          if [[ "$validation_status" -ne 0 ]]; then
-            echo "Generated status validation failed with exit code $validation_status." >&2
+          if [[ "$status_generation_status" -ne 0 ]]; then
+            echo "Status generation failed with exit code $status_generation_status." >&2
+          fi
+          if [[ "$status_validation_status" -ne 0 ]]; then
+            echo "Generated status validation failed with exit code $status_validation_status." >&2
+          fi
+          if [[ "$slo_generation_status" -ne 0 ]]; then
+            echo "SLO generation failed with exit code $slo_generation_status." >&2
+          fi
+          if [[ "$slo_validation_status" -ne 0 ]]; then
+            echo "Generated SLO validation failed with exit code $slo_validation_status." >&2
           fi
           if [[ "$publish_status" -ne 0 ]]; then
             echo "Status publication failed with exit code $publish_status." >&2
           fi
-          (( monitor_status == 0 && validation_status == 0 && publish_status == 0 ))
+          (( monitor_status == 0 && status_generation_status == 0 && status_validation_status == 0 && slo_generation_status == 0 && slo_validation_status == 0 && publish_status == 0 ))

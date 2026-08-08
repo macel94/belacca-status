@@ -6,8 +6,15 @@ platform.
 The scheduled GitHub Actions runner checks public portfolio, Pong, and
 analytics endpoints from outside the native cluster that hosts the platform. It
 commits a public `status.json` artifact and a bounded, sanitized observation
-record under `history/` every hour. See [`POLICY.md`](POLICY.md) for the
-publication and failure-domain boundary.
+record under `history/` every hour. It also publishes [`slo.json`](slo.json), a
+sanitized 30-day SLO and error-budget artifact generated from that history. See
+[`POLICY.md`](POLICY.md) for the publication and failure-domain boundary.
+
+Each supported public application has an internal 99% availability objective;
+this is not an SLA and carries no service credit. Missing or malformed hourly
+slots keep SLO values unknown until the full 720-slot window is valid. A
+controlled-drill recovery objective under six minutes is separate policy context
+and is excluded from availability arithmetic.
 
 The repository is intentionally not a Kubernetes status API. The website reads
 the raw artifact from GitHub and falls back to its checked-in unknown state if
@@ -19,6 +26,8 @@ also used as the platform submodule pointer for local workspace review.
 ```bash
 npm test
 npm run check
+node scripts/slo-evidence.mjs --history-dir history --output slo.json
+node scripts/validate-slo.mjs slo.json
 ```
 
 The full Pong journey requires the sibling repository and its npm dependency:
