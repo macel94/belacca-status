@@ -4,7 +4,7 @@ Hourly, externally observed and sanitized status history for the Belacca
 platform.
 
 The scheduled GitHub Actions runner checks public portfolio, Pong, and
-analytics endpoints from outside the single VM that hosts the platform. It
+analytics endpoints from outside the native cluster that hosts the platform. It
 commits a public `status.json` artifact and a bounded, sanitized observation
 record under `history/` every hour. See [`POLICY.md`](POLICY.md) for the
 publication and failure-domain boundary.

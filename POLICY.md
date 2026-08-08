@@ -7,7 +7,7 @@ history, not a multi-region monitoring service.
 ## Scope
 
 The GitHub-hosted Actions runner checks the public endpoints from outside the
-single VM that hosts the platform:
+native cluster that hosts the platform:
 
 - **Portfolio**: `https://francesco.belacca.com/health` and the homepage.
 - **Pong**: `https://pong.belacca.com/health`, homepage, and the complete
@@ -40,9 +40,9 @@ are not represented as manually reviewed incidents.
 
 ## Failure-domain boundary
 
-The runner and Git history are outside the VM, so an outage can still be
-recorded while the cluster is down. The status page is hosted by that same
-cluster, however, so it cannot display the outage until the site recovers. A
-second public host would be required for an outage banner during a complete VM
-failure. This repository intentionally documents that limitation rather than
+The runner and Git history are outside the native cluster, so an outage can
+still be recorded while the cluster is down. The status page is hosted by that
+same cluster, however, so it cannot display the outage until the site recovers.
+A second public host would be required for an outage banner during a complete
+cluster failure. This repository intentionally documents that limitation rather than
 implying independent multi-region monitoring.
