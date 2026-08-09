@@ -11,18 +11,21 @@ export const SERVICE_DEFINITIONS = [
     id: 'portfolio',
     name: 'Portfolio',
     component: 'portfolio',
+    checks: ['portfolio-health', 'portfolio-homepage'],
     indicator: 'Successful external portfolio health and homepage observation',
   },
   {
     id: 'pong',
     name: 'Cloud Native Pong',
     component: 'pong',
+    checks: ['pong-health', 'pong-homepage', 'pong-journey'],
     indicator: 'Successful external Pong health, homepage, and two-player journey observation',
   },
   {
     id: 'analytics',
     name: 'Analytics',
     component: 'analytics',
+    checks: ['analytics-status', 'analytics-count'],
     indicator: 'Successful external analytics status and harmless collector observation',
   },
 ];
@@ -82,6 +85,11 @@ export function parseHistoryRecord(value) {
   return {
     schema_version: 'belacca.observation.v1',
     observed_at: new Date(value.observed_at).toISOString(),
+    checks: Array.isArray(value.checks)
+      ? value.checks
+        .filter((check) => check && typeof check.id === 'string' && typeof check.passed === 'boolean')
+        .map((check) => ({ id: check.id, passed: check.passed }))
+      : [],
     components: value.components.map((component) => ({
       id: component.id,
       raw_pass: component.raw_pass,
@@ -140,7 +148,9 @@ function latestRecord(records) {
 function serviceValue(record, service) {
   const component = record.components.find((item) => item.id === service.component);
   if (!component) return null;
-  return component.raw_pass;
+  const checks = new Map(record.checks.map((check) => [check.id, check.passed]));
+  if (service.checks.some((checkID) => !checks.has(checkID))) return null;
+  return service.checks.every((checkID) => checks.get(checkID) === true);
 }
 
 function calculateService(service, records, invalidRecords, invalidTimestamps, evaluationEnd, env) {

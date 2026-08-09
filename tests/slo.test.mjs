@@ -17,7 +17,17 @@ function historyRecord(time, values = {}) {
     observed_at: new Date(time).toISOString(),
     status: 'operational',
     critical_pass: true,
-    checks: [],
+    checks: [
+      { id: 'portfolio-health', passed: values.portfolio !== false },
+      { id: 'portfolio-homepage', passed: values.portfolio !== false },
+      { id: 'pong-health', passed: values.pong !== false },
+      { id: 'pong-homepage', passed: values.pong !== false },
+      { id: 'pong-journey', passed: values.pong !== false },
+      ...(values.legacyAnalytics ? [{ id: 'analytics-status', passed: values.analytics !== false }] : [
+        { id: 'analytics-status', passed: values.analytics !== false },
+        { id: 'analytics-count', passed: values.analytics !== false },
+      ]),
+    ],
     components: ['portfolio', 'pong', 'analytics']
       .filter((id) => values.omit !== id)
       .map((id) => ({ id, status: values[id] === false ? 'incident' : 'operational', raw_pass: values[id] !== false })),
@@ -71,6 +81,16 @@ test('malformed records outside the evaluated window do not poison a complete wi
   assert.equal(artifact.evaluation.invalid_records, 0);
 });
 
+test('legacy analytics observations without the collector check remain unknown', () => {
+  const records = completeHistory();
+  records[records.length - 1] = historyRecord(END, { legacyAnalytics: true });
+  const artifact = buildSloArtifact({ records, now: END, env });
+  const analytics = artifact.services.find((service) => service.id === 'analytics');
+  assert.equal(analytics.state, 'insufficient_data');
+  assert.equal(analytics.counts.unknown_slots, 1);
+  assert.equal(analytics.sli_percent, null);
+});
+
 test('malformed records inside an expected slot remain unknown', () => {
   const artifact = buildSloArtifact({
     records: completeHistory(),
@@ -101,7 +121,8 @@ test('malformed records without a location prevent numeric claims', () => {
 
 test('complete windows report the 99 percent objective and error budget', () => {
   const records = completeHistory();
-  records.at(-1).components.find((component) => component.id === 'pong').raw_pass = false;
+  records[records.length - 1].components.find((component) => component.id === 'pong').raw_pass = false;
+  records[records.length - 1].checks.find((check) => check.id === 'pong-journey').passed = false;
   const artifact = buildSloArtifact({ records, now: END, env });
   const portfolio = artifact.services.find((service) => service.id === 'portfolio');
   const pong = artifact.services.find((service) => service.id === 'pong');
