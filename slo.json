@@ -30,7 +30,7 @@
     "expected_slots": 720,
     "cadence": "1h",
     "source_history_schema": "belacca.observation.v1",
-    "valid_records": 48,
+    "valid_records": 49,
     "invalid_records": 0
   },
   "services": [
@@ -55,15 +55,15 @@
         "good_slots": 43,
         "bad_slots": 0,
         "unknown_slots": 677,
-        "duplicate_slots": 5,
+        "duplicate_slots": 6,
         "invalid_records": 0
       },
       "coverage_percent": 5.972222,
       "sli_percent": null,
       "error_budget": null,
-      "latest_evidence_timestamp": "2026-08-09T09:01:16.988Z",
+      "latest_evidence_timestamp": "2026-08-09T09:55:01.559Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31304897134",
+        "https://github.com/macel94/belacca-status/actions/runs/31307048582",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio"
       ]
     },
@@ -88,15 +88,15 @@
         "good_slots": 41,
         "bad_slots": 2,
         "unknown_slots": 677,
-        "duplicate_slots": 5,
+        "duplicate_slots": 6,
         "invalid_records": 0
       },
       "coverage_percent": 5.972222,
       "sli_percent": null,
       "error_budget": null,
-      "latest_evidence_timestamp": "2026-08-09T09:01:16.988Z",
+      "latest_evidence_timestamp": "2026-08-09T09:55:01.559Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31304897134",
+        "https://github.com/macel94/belacca-status/actions/runs/31307048582",
         "https://github.com/macel94/belacca-status/tree/main/history#pong"
       ]
     },
@@ -121,21 +121,21 @@
         "good_slots": 6,
         "bad_slots": 0,
         "unknown_slots": 714,
-        "duplicate_slots": 5,
+        "duplicate_slots": 6,
         "invalid_records": 0
       },
       "coverage_percent": 0.833333,
       "sli_percent": null,
       "error_budget": null,
-      "latest_evidence_timestamp": "2026-08-09T09:01:16.988Z",
+      "latest_evidence_timestamp": "2026-08-09T09:55:01.559Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31304897134",
+        "https://github.com/macel94/belacca-status/actions/runs/31307048582",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics"
       ]
     }
   ],
   "source_references": [
-    "https://github.com/macel94/belacca-status/actions/runs/31304897134",
+    "https://github.com/macel94/belacca-status/actions/runs/31307048582",
     "https://github.com/macel94/belacca-status/tree/main/history#platform"
   ],
   "notes": [
