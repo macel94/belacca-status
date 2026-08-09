@@ -41,7 +41,8 @@ function checks({ portfolio = true, pong = true, analytics = true } = {}) {
     { id: 'pong-health', name: 'Pong health', critical: true, passed: pong, duration_ms: 10, evidence_timestamp: new Date(NOW).toISOString(), source_references: ['https://example.test/pong-health'] },
     { id: 'pong-homepage', name: 'Pong homepage', critical: true, passed: pong, duration_ms: 10, evidence_timestamp: new Date(NOW).toISOString(), source_references: ['https://example.test/pong-homepage'] },
     { id: 'pong-journey', name: 'Pong journey', critical: true, passed: pong, duration_ms: 10, evidence_timestamp: new Date(NOW).toISOString(), source_references: ['https://example.test/pong-journey'] },
-    { id: 'analytics-status', name: 'Analytics status', critical: false, passed: analytics, duration_ms: 10, evidence_timestamp: new Date(NOW).toISOString(), source_references: ['https://example.test/analytics'] },
+    { id: 'analytics-status', name: 'Analytics status', critical: false, passed: analytics, duration_ms: 10, evidence_timestamp: new Date(NOW).toISOString(), source_references: ['https://example.test/analytics-status'] },
+    { id: 'analytics-count', name: 'Analytics collector', critical: false, passed: analytics, duration_ms: 10, evidence_timestamp: new Date(NOW).toISOString(), source_references: ['https://example.test/analytics-count'] },
   ];
 }
 
@@ -134,9 +135,15 @@ test('transient external failures are retried before publishing', async () => {
   let portfolioHealthAttempts = 0;
   let journeyAttempts = 0;
   const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    if (['belacca.com', 'www.belacca.com', 'www.francesco.belacca.com'].includes(parsed.hostname)) {
+      return new Response('', { status: 308, headers: { location: `https://francesco.belacca.com${parsed.pathname}` } });
+    }
     if (url === 'https://francesco.belacca.com/health' && portfolioHealthAttempts++ === 0) {
       throw new Error('transient network failure');
     }
+    if (url.includes('/count?')) return new Response('GIF89a', { status: 200, headers: { 'content-type': 'image/gif' } });
+    if (url.endsWith('/count.js')) return new Response('window.goatcounter = {};', { status: 200, headers: { 'content-type': 'text/javascript' } });
     const body = url.endsWith('/health') ? 'ok\n' : url.includes('stats') ? JSON.stringify({ version: 'test', uptime: '1h' }) : '<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">';
     return new Response(body, { status: 200 });
   };
@@ -163,6 +170,12 @@ test('persistent failures remain failures after the retry budget is exhausted', 
   const directory = await mkdtemp(join(tmpdir(), 'belacca-status-persistent-failure-'));
   let journeyAttempts = 0;
   const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    if (['belacca.com', 'www.belacca.com', 'www.francesco.belacca.com'].includes(parsed.hostname)) {
+      return new Response('', { status: 308, headers: { location: `https://francesco.belacca.com${parsed.pathname}` } });
+    }
+    if (url.includes('/count?')) return new Response('GIF89a', { status: 200, headers: { 'content-type': 'image/gif' } });
+    if (url.endsWith('/count.js')) return new Response('window.goatcounter = {};', { status: 200, headers: { 'content-type': 'text/javascript' } });
     const body = url.endsWith('/health') ? 'ok\n' : url.includes('stats') ? JSON.stringify({ version: 'test', uptime: '1h' }) : '<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">';
     return new Response(body, { status: 200 });
   };
@@ -181,12 +194,51 @@ test('persistent failures remain failures after the retry budget is exhausted', 
   assert.equal(result.artifact.components.find((item) => item.id === 'pong').status, 'degraded');
 });
 
+test('monitor checks analytics collector paths and portfolio redirects without following redirects', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'belacca-status-collector-'));
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    const aliasHosts = new Set(['belacca.com', 'www.belacca.com', 'www.francesco.belacca.com']);
+    if (aliasHosts.has(parsed.hostname)) {
+      return new Response('', { status: 308, headers: { location: `https://francesco.belacca.com${parsed.pathname}` } });
+    }
+    if (parsed.pathname === '/count') return new Response('GIF89a', { status: 200, headers: { 'content-type': 'image/gif' } });
+    if (parsed.pathname === '/count.js') return new Response('window.goatcounter = {};', { status: 200, headers: { 'content-type': 'text/javascript' } });
+    if (parsed.pathname === '/status') return new Response(JSON.stringify({ version: 'test', uptime: '1h' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    if (parsed.pathname === '/health') return new Response('ok', { status: 200, headers: { 'content-type': 'text/plain' } });
+    return new Response('<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">', { status: 200 });
+  };
+  const result = await runMonitor({
+    env: { ...env, STATUS_OBSERVATION_ID: 'collector-redirects', STATUS_CHECK_ATTEMPTS: '1', STATUS_RETRY_DELAY_MS: '0' },
+    fetchImpl,
+    runProcessImpl: async () => ({ passed: true }),
+    now: NOW,
+    pongScript: '/tmp/pong.mjs',
+    output: join(directory, 'status.json'),
+    historyDir: join(directory, 'history'),
+  });
+  const checkIDs = result.historyRecord.checks.map((check) => check.id);
+  assert.ok(checkIDs.includes('analytics-count'));
+  assert.ok(checkIDs.includes('analytics-count-js'));
+  assert.ok(checkIDs.includes('portfolio-redirect-belacca-com'));
+  assert.equal(result.artifact.components.find((item) => item.id === 'analytics').status, 'operational');
+});
+
 test('runMonitor writes only sanitized status and history records', async () => {
   const { mkdtemp, readFile: read } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
   const directory = await mkdtemp(join(tmpdir(), 'belacca-status-'));
   const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    if (['belacca.com', 'www.belacca.com', 'www.francesco.belacca.com'].includes(parsed.hostname)) {
+      return new Response('', { status: 308, headers: { location: `https://francesco.belacca.com${parsed.pathname}` } });
+    }
+    if (url.includes('/count?')) return new Response('GIF89a', { status: 200, headers: { 'content-type': 'image/gif' } });
+    if (url.endsWith('/count.js')) return new Response('window.goatcounter = {};', { status: 200, headers: { 'content-type': 'text/javascript' } });
     const body = url.endsWith('/health') ? 'ok\n' : url.includes('stats') ? JSON.stringify({ version: 'test', uptime: '1h' }) : '<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">';
     return new Response(body, { status: 200 });
   };

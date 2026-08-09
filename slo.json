@@ -109,7 +109,7 @@
       "target_percent": "99%",
       "window": "30d",
       "cadence": "1h",
-      "indicator": "Successful external analytics status observation",
+      "indicator": "Successful external analytics status and harmless collector observation",
       "evaluation_window": {
         "start": "2026-07-10T00:00:00.000Z",
         "end": "2026-08-08T23:00:00.000Z",

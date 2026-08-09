@@ -12,11 +12,15 @@ native cluster that hosts the platform:
 - **Portfolio**: `https://francesco.belacca.com/health` and the homepage.
 - **Pong**: `https://pong.belacca.com/health`, homepage, and the complete
   create/join/two-WebSocket/playing/cleanup journey from the Pong repository.
-- **Analytics**: `https://stats.belacca.com/status`.
+- **Analytics**: `https://stats.belacca.com/status`, the harmless `/count` collector probe, and `/count.js` script availability.
+- **Portfolio redirects**: `belacca.com`, `www.belacca.com`, and `www.francesco.belacca.com` are checked as non-SLO routing diagnostics; each must permanently redirect to `https://francesco.belacca.com` while preserving the requested path.
 
-The dashboard, Flux UI, Dex alias, and portfolio redirect aliases are not
-monitored as independent applications. The complete supported-host inventory
-and canonicalization policy is maintained in the GitOps repository's
+Analytics `/status` and `/count` are the SLO-eligible checks. `/count.js` and
+portfolio alias redirects are supporting diagnostics and do not create separate
+services or SLO denominators. The dashboard, Flux UI, and Dex alias are not
+monitored because authenticated checks require an operator-managed identity;
+they remain explicitly unconfigured rather than using credentials in this
+repository. The complete supported-host inventory and canonicalization policy is maintained in the GitOps repository's
 [`docs/SITES.md`](https://github.com/macel94/belacca-gitops/blob/main/docs/SITES.md).
 The dashboard and Flux UI require operator-managed identity and credentials.
 
@@ -34,7 +38,9 @@ The dashboard and Flux UI require operator-managed identity and credentials.
   expired or malformed artifact as `unknown`.
 - Uptime is not reported until at least 24 hours of hourly history exists.
 - The published artifact contains no response bodies, room IDs, player names,
-  addresses, tokens, cookies, internal hostnames, or raw exception messages.
+  addresses, tokens, cookies, internal hostnames, or raw exception messages. The
+  collector probe uses only a fixed synthetic path/title and stores aggregate
+  pass/fail results, never the generated request URL or response body.
 
 The policy itself is human-approved. Individual observations are automated and
 are not represented as manually reviewed incidents.

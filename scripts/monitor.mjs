@@ -17,7 +17,7 @@ const POLICY = {
 const COMPONENTS = {
   portfolio: { name: 'Portfolio', critical: true, checks: ['portfolio-health', 'portfolio-homepage'] },
   pong: { name: 'Cloud Native Pong', critical: true, checks: ['pong-health', 'pong-homepage', 'pong-journey'] },
-  analytics: { name: 'Analytics', critical: false, checks: ['analytics-status'] },
+  analytics: { name: 'Analytics', critical: false, checks: ['analytics-status', 'analytics-count'] },
 };
 
 const MAX_BODY_BYTES = 128 * 1024;
@@ -105,7 +105,7 @@ async function readResponseBody(response, label) {
   return Buffer.concat(chunks, size).toString('utf8');
 }
 
-async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeoutMs, observedAt, env, attempts, retryDelayMs }) {
+async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeoutMs, observedAt, env, attempts, retryDelayMs, redirect = 'follow', acceptResponse = (response) => response.ok }) {
   const started = Date.now();
   let passed = false;
   let failure = '';
@@ -116,7 +116,7 @@ async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeo
     try {
       const response = await fetchImpl(url, {
         method: 'GET',
-        redirect: 'follow',
+        redirect,
         headers: {
           accept: 'application/json, text/plain, text/html;q=0.9',
           'user-agent': 'belacca-status-monitor/1',
@@ -124,7 +124,7 @@ async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeo
         signal: controller.signal,
       });
       const body = await readResponseBody(response, name);
-      passed = response.ok && condition(body, response);
+      passed = acceptResponse(response) && condition(body, response);
       if (!passed) failure = 'response did not satisfy the configured check';
     } catch (error) {
       failure = error?.name === 'AbortError' || controller.signal.aborted ? 'request timed out' : 'request failed';
@@ -204,7 +204,21 @@ function buildCheckDefinitions(env) {
   const portfolio = (env.PORTFOLIO_URL || 'https://francesco.belacca.com').replace(/\/$/u, '');
   const pong = (env.PONG_URL || 'https://pong.belacca.com').replace(/\/$/u, '');
   const analytics = (env.ANALYTICS_URL || 'https://stats.belacca.com').replace(/\/$/u, '');
+  const aliases = [
+    ['belacca.com', 'https://francesco.belacca.com/reliability.html'],
+    ['www.belacca.com', 'https://francesco.belacca.com/reliability.html'],
+    ['www.francesco.belacca.com', 'https://francesco.belacca.com/reliability.html'],
+  ];
   return [
+    ...aliases.map(([host, location]) => ({
+      id: `portfolio-redirect-${host.replaceAll('.', '-')}`,
+      name: `Portfolio redirect ${host}`,
+      critical: false,
+      url: `https://${host}/reliability.html`,
+      redirect: 'manual',
+      acceptResponse: (response) => response.status >= 300 && response.status < 400,
+      condition: (_body, response) => response.headers.get('location') === location,
+    })),
     {
       id: 'portfolio-health', name: 'Portfolio health', critical: true, url: `${portfolio}/health`,
       condition: (body) => body.trim() === 'ok',
@@ -232,6 +246,14 @@ function buildCheckDefinitions(env) {
         }
       },
     },
+    {
+      id: 'analytics-count', name: 'Analytics collector', critical: false, url: `${analytics}/count?p=%2Fsre-probe&t=Belacca%20SRE%20probe`,
+      condition: (_body, response) => response.ok && response.headers.get('content-type')?.toLowerCase().includes('image/gif'),
+    },
+    {
+      id: 'analytics-count-js', name: 'Analytics collector script', critical: false, url: `${analytics}/count.js`,
+      condition: (body, response) => response.ok && response.headers.get('content-type')?.toLowerCase().includes('javascript') && body.includes('goatcounter'),
+    },
   ];
 }
 
@@ -242,7 +264,7 @@ async function observe({ env = process.env, fetchImpl = globalThis.fetch, runPro
   const checks = [];
   const { attempts, retryDelayMs } = retryOptions(env);
   for (const definition of buildCheckDefinitions(env)) {
-    checks.push(await fetchCheck({ ...definition, fetchImpl, timeoutMs: Number(env.STATUS_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS, observedAt, env, attempts, retryDelayMs }));
+    checks.push(await fetchCheck({ ...definition, fetchImpl, timeoutMs: Number(env.STATUS_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS, observedAt, env, attempts, retryDelayMs, redirect: definition.redirect, acceptResponse: definition.acceptResponse }));
     if (definition.id === 'pong-homepage') {
       checks.push(await runPongJourney({
         script: pongScript,

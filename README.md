@@ -5,9 +5,11 @@ platform.
 
 The scheduled GitHub Actions runner checks public portfolio, Pong, and
 analytics endpoints from outside the native cluster that hosts the platform. It
-commits a public `status.json` artifact and a bounded, sanitized observation
-record under `history/` every hour. It also publishes [`slo.json`](slo.json), a
-sanitized 30-day SLO and error-budget artifact generated from that history. See
+checks the analytics `/status` endpoint and a fixed harmless `/count` collector
+probe; portfolio aliases are checked as redirect diagnostics. It commits a
+public `status.json` artifact and a bounded, sanitized observation record under
+`history/` every hour. It also publishes [`slo.json`](slo.json), a sanitized
+30-day SLO and error-budget artifact generated from that history. See
 [`POLICY.md`](POLICY.md) for the publication and failure-domain boundary.
 
 Each supported public application has an internal 99% availability objective;
@@ -15,6 +17,10 @@ this is not an SLA and carries no service credit. Missing or malformed hourly
 slots keep SLO values unknown until the full 720-slot window is valid. A
 controlled-drill recovery objective under six minutes is separate policy context
 and is excluded from availability arithmetic.
+
+Authenticated dashboard and Flux checks are intentionally not configured: they
+would require an operator-managed identity and are not part of the public
+artifact until a dedicated safe probe exists.
 
 The repository is intentionally not a Kubernetes status API. The website reads
 the raw artifact from GitHub and falls back to its checked-in unknown state if

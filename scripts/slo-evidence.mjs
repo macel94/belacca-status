@@ -23,7 +23,7 @@ export const SERVICE_DEFINITIONS = [
     id: 'analytics',
     name: 'Analytics',
     component: 'analytics',
-    indicator: 'Successful external analytics status observation',
+    indicator: 'Successful external analytics status and harmless collector observation',
   },
 ];
 
