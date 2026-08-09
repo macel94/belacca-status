@@ -173,4 +173,7 @@ jobs:
           if [[ "$publish_status" -ne 0 ]]; then
             echo "Status publication failed with exit code $publish_status." >&2
           fi
-          (( monitor_status == 0 && status_generation_status == 0 && status_validation_status == 0 && slo_generation_status == 0 && slo_validation_status == 0 && publish_status == 0 ))
+          # Exit code 1 means the external checks failed and was already published
+          # as a valid degraded/incident observation. Only monitor errors (2+) fail
+          # the workflow after the generated artifacts have been validated.
+          (( (monitor_status == 0 || monitor_status == 1) && status_generation_status == 0 && status_validation_status == 0 && slo_generation_status == 0 && slo_validation_status == 0 && publish_status == 0 ))
