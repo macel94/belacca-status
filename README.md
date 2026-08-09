@@ -22,10 +22,13 @@ Authenticated dashboard and Flux checks are intentionally not configured: they
 would require an operator-managed identity and are not part of the public
 artifact until a dedicated safe probe exists.
 
-The repository is intentionally not a Kubernetes status API. The website reads
-the raw artifact from GitHub and falls back to its checked-in unknown state if
-the artifact is missing, malformed, or expired. The first reviewed commit is
-also used as the platform submodule pointer for local workspace review.
+The repository is intentionally not a Kubernetes status API or paging system.
+The website reads only the public `status.json` artifact from GitHub and falls
+back to its checked-in unknown state if the artifact is missing, malformed, or
+expired. `slo.json` is durable reliability evidence, not a public uptime claim;
+its 99%/30d values remain non-reportable until the complete valid window exists.
+The first reviewed commit is also used as the platform submodule pointer for
+local workspace review.
 
 ## Local checks
 
