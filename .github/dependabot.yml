@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # npm dependencies used by the status validator and publisher.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      npm-deps:
+        patterns:
+          - "*"
+
+  # GitHub Actions used by the hourly status publisher.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      github-actions:
+        patterns:
+          - "*"
