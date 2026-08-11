@@ -5,14 +5,14 @@
   "publication_state": "published",
   "status": "incident",
   "summary": "Cloud Native Pong has a confirmed external incident.",
-  "observation_id": "31480992719",
-  "observed_at": "2026-08-11T10:10:14.938Z",
-  "updated_at": "2026-08-11T10:10:14.938Z",
-  "evidence_timestamp": "2026-08-11T10:10:14.938Z",
-  "valid_until": "2026-08-11T12:10:14.938Z",
+  "observation_id": "31484962934",
+  "observed_at": "2026-08-11T11:04:13.492Z",
+  "updated_at": "2026-08-11T11:04:13.492Z",
+  "evidence_timestamp": "2026-08-11T11:04:13.492Z",
+  "valid_until": "2026-08-11T13:04:13.492Z",
   "publisher": {
     "name": "Belacca hourly status monitor",
-    "source_reference": "https://github.com/macel94/belacca-status/actions/runs/31480992719"
+    "source_reference": "https://github.com/macel94/belacca-status/actions/runs/31484962934"
   },
   "monitoring_policy": {
     "id": "belacca-status-hourly-v1",
@@ -37,10 +37,10 @@
       "critical": true,
       "status": "operational",
       "summary": "All configured external checks passed.",
-      "evidence_timestamp": "2026-08-11T10:10:14.938Z",
-      "duration_ms": 1111,
+      "evidence_timestamp": "2026-08-11T11:04:13.492Z",
+      "duration_ms": 1538,
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31480992719",
+        "https://github.com/macel94/belacca-status/actions/runs/31484962934",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio-health",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio-homepage"
       ]
@@ -50,11 +50,11 @@
       "name": "Cloud Native Pong",
       "critical": true,
       "status": "incident",
-      "summary": "1 critical external check failed.",
-      "evidence_timestamp": "2026-08-11T10:10:14.938Z",
-      "duration_ms": 110142,
+      "summary": "0 critical external checks failed.",
+      "evidence_timestamp": "2026-08-11T11:04:13.492Z",
+      "duration_ms": 23379,
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31480992719",
+        "https://github.com/macel94/belacca-status/actions/runs/31484962934",
         "https://github.com/macel94/belacca-status/tree/main/history#pong-health",
         "https://github.com/macel94/cloudnativepong/commit/ff4ac8ef6b085d03168a130b0f8e031eca0a181d",
         "https://github.com/macel94/belacca-status/tree/main/history#pong-homepage",
@@ -67,10 +67,10 @@
       "critical": false,
       "status": "operational",
       "summary": "All configured external checks passed.",
-      "evidence_timestamp": "2026-08-11T10:10:14.938Z",
-      "duration_ms": 1996,
+      "evidence_timestamp": "2026-08-11T11:04:13.492Z",
+      "duration_ms": 776,
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31480992719",
+        "https://github.com/macel94/belacca-status/actions/runs/31484962934",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics-status",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics-count"
       ]
@@ -82,16 +82,16 @@
       "status": "investigating",
       "summary": "Cloud Native Pong has failed the configured external checks.",
       "started_at": "2026-08-11T09:13:02.846Z",
-      "updated_at": "2026-08-11T10:10:14.938Z",
+      "updated_at": "2026-08-11T11:04:13.492Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31480992719",
+        "https://github.com/macel94/belacca-status/actions/runs/31484962934",
         "https://github.com/macel94/belacca-status/tree/main/history#pong",
         "https://github.com/macel94/cloudnativepong/commit/ff4ac8ef6b085d03168a130b0f8e031eca0a181d"
       ]
     }
   ],
   "source_references": [
-    "https://github.com/macel94/belacca-status/actions/runs/31480992719",
+    "https://github.com/macel94/belacca-status/actions/runs/31484962934",
     "https://github.com/macel94/belacca-status/tree/main/history#platform"
   ],
   "notes": [
