@@ -77,6 +77,9 @@ jobs:
       - name: Generate and commit status observation
         id: publish
         shell: bash
+        env:
+          DASHBOARD_PROBE_BEARER_TOKEN: ${{ secrets.DASHBOARD_PROBE_BEARER_TOKEN }}
+          FLUX_PROBE_BEARER_TOKEN: ${{ secrets.FLUX_PROBE_BEARER_TOKEN }}
         run: |
           set -euo pipefail
           monitor_status=0

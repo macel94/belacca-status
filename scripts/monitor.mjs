@@ -14,10 +14,35 @@ const POLICY = {
   recovery_threshold: 2,
 };
 
+// Keep this list aligned with catalog/services.json. /count.js and operator
+// journeys are supporting diagnostics and are deliberately not SLO inputs.
+export const ANALYTICS_SLI_CHECKS = ['analytics-status', 'analytics-count'];
+export const PORTFOLIO_ALIAS_HOSTS = ['belacca.com', 'www.belacca.com', 'www.francesco.belacca.com'];
+export const PORTFOLIO_ALIAS_PATHS = ['/', '/reliability.html', '/status.html', '/privacy.html'];
+const OPERATOR_PROBES = [
+  {
+    id: 'dashboard-authenticated',
+    name: 'Authenticated dashboard journey',
+    tokenEnv: 'DASHBOARD_PROBE_BEARER_TOKEN',
+    urlEnv: 'DASHBOARD_PROBE_URL',
+    defaultURL: 'https://dashboard.belacca.com/',
+    expected: 'authenticated dashboard response',
+  },
+  {
+    id: 'flux-authenticated',
+    name: 'Authenticated Flux journey',
+    tokenEnv: 'FLUX_PROBE_BEARER_TOKEN',
+    urlEnv: 'FLUX_PROBE_URL',
+    defaultURL: 'https://flux.belacca.com/',
+    expected: 'authenticated Flux response',
+  },
+];
+const OUTCOMES = ['passed', 'target_failure', 'monitor_failure', 'configuration_unknown'];
 const COMPONENTS = {
   portfolio: { name: 'Portfolio', critical: true, checks: ['portfolio-health', 'portfolio-homepage'] },
   pong: { name: 'Cloud Native Pong', critical: true, checks: ['pong-health', 'pong-homepage', 'pong-journey'] },
-  analytics: { name: 'Analytics', critical: false, checks: ['analytics-status', 'analytics-count'] },
+  analytics: { name: 'Analytics', critical: false, checks: ANALYTICS_SLI_CHECKS },
+  operator: { name: 'Operator journeys', critical: false, checks: OPERATOR_PROBES.map((probe) => probe.id) },
 };
 
 const MAX_BODY_BYTES = 128 * 1024;
@@ -105,10 +130,12 @@ async function readResponseBody(response, label) {
   return Buffer.concat(chunks, size).toString('utf8');
 }
 
-async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeoutMs, observedAt, env, attempts, retryDelayMs, redirect = 'follow', acceptResponse = (response) => response.ok }) {
+async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeoutMs, observedAt, env, attempts, retryDelayMs, redirect = 'follow', acceptResponse = (response) => response.ok, headers = {} }) {
   const started = Date.now();
   let passed = false;
   let failure = '';
+  let outcome = 'target_failure';
+  let failureClass = 'target';
   let attempt = 0;
   for (attempt = 1; attempt <= attempts; attempt += 1) {
     const controller = new AbortController();
@@ -120,13 +147,21 @@ async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeo
         headers: {
           accept: 'application/json, text/plain, text/html;q=0.9',
           'user-agent': 'belacca-status-monitor/1',
+          ...headers,
         },
         signal: controller.signal,
       });
       const body = await readResponseBody(response, name);
       passed = acceptResponse(response) && condition(body, response);
-      if (!passed) failure = 'response did not satisfy the configured check';
+      if (passed) {
+        outcome = 'passed';
+        failureClass = 'none';
+      } else {
+        failure = 'response did not satisfy the configured check';
+      }
     } catch (error) {
+      outcome = 'monitor_failure';
+      failureClass = 'monitor';
       failure = error?.name === 'AbortError' || controller.signal.aborted ? 'request timed out' : 'request failed';
     } finally {
       clearTimeout(timer);
@@ -140,9 +175,26 @@ async function fetchCheck({ id, name, critical, url, condition, fetchImpl, timeo
     name,
     critical,
     passed,
+    outcome,
+    failure_class: failureClass,
     duration_ms: Math.min(Date.now() - started, 120_000),
     evidence_timestamp: observedAt,
     summary: passed ? `External check passed${attempt > 1 ? ` after ${attemptLabel}` : ''}.` : `External check failed after ${attemptLabel}: ${failure || 'check condition failed'}.`,
+    source_references: sourceReferences(env, id),
+  };
+}
+
+function configurationUnknown({ id, name, critical, observedAt, env, reason }) {
+  return {
+    id,
+    name,
+    critical,
+    passed: false,
+    outcome: 'configuration_unknown',
+    failure_class: 'configuration',
+    duration_ms: 0,
+    evidence_timestamp: observedAt,
+    summary: `External check is not configured: ${reason}.`,
     source_references: sourceReferences(env, id),
   };
 }
@@ -178,8 +230,9 @@ async function runPongJourney({ script, baseURL, env, observedAt, runProcessImpl
   let result;
   let attempt = 0;
   for (attempt = 1; attempt <= attempts; attempt += 1) {
+    const { DASHBOARD_PROBE_BEARER_TOKEN, FLUX_PROBE_BEARER_TOKEN, ...syntheticEnv } = env;
     result = await runProcessImpl(process.execPath, [resolve(script)], {
-      env: { ...env, SYNTHETIC_BASE_URL: baseURL, SYNTHETIC_TIMEOUT_MS: '20000', SYNTHETIC_REQUEST_TIMEOUT_MS: '8000' },
+      env: { ...syntheticEnv, SYNTHETIC_BASE_URL: baseURL, SYNTHETIC_TIMEOUT_MS: '20000', SYNTHETIC_REQUEST_TIMEOUT_MS: '8000' },
       timeoutMs: PONG_TIMEOUT_MS,
     });
     if (result.passed === true || attempt === attempts) break;
@@ -191,6 +244,8 @@ async function runPongJourney({ script, baseURL, env, observedAt, runProcessImpl
     name: 'Pong two-player journey',
     critical: true,
     passed: result.passed === true,
+    outcome: result.passed === true ? 'passed' : (result.failure?.includes('synthetic journey') ? 'monitor_failure' : 'target_failure'),
+    failure_class: result.passed === true ? 'none' : (result.failure?.includes('synthetic journey') ? 'monitor' : 'target'),
     duration_ms: Math.min(Date.now() - started, 120_000),
     evidence_timestamp: observedAt,
     summary: result.passed === true
@@ -200,23 +255,25 @@ async function runPongJourney({ script, baseURL, env, observedAt, runProcessImpl
   };
 }
 
-function buildCheckDefinitions(env) {
+export function buildCheckDefinitions(env) {
   const portfolio = (env.PORTFOLIO_URL || 'https://francesco.belacca.com').replace(/\/$/u, '');
   const pong = (env.PONG_URL || 'https://pong.belacca.com').replace(/\/$/u, '');
   const analytics = (env.ANALYTICS_URL || 'https://stats.belacca.com').replace(/\/$/u, '');
-  const aliases = [
-    ['belacca.com', 'https://francesco.belacca.com/reliability.html'],
-    ['www.belacca.com', 'https://francesco.belacca.com/reliability.html'],
-    ['www.francesco.belacca.com', 'https://francesco.belacca.com/reliability.html'],
-  ];
+  const aliases = PORTFOLIO_ALIAS_HOSTS.flatMap((host) => PORTFOLIO_ALIAS_PATHS.map((path) => ({
+    host,
+    path,
+    location: `https://francesco.belacca.com${path}`,
+  })));
   return [
-    ...aliases.map(([host, location]) => ({
-      id: `portfolio-redirect-${host.replaceAll('.', '-')}`,
-      name: `Portfolio redirect ${host}`,
+    ...aliases.map(({ host, path, location }) => ({
+      id: path === '/reliability.html'
+        ? `portfolio-redirect-${host.replaceAll('.', '-')}`
+        : `portfolio-redirect-${host.replaceAll('.', '-')}-${path === '/' ? 'root' : path.slice(1).replaceAll(/[^A-Za-z0-9]+/gu, '-')}`,
+      name: `Portfolio redirect ${host}${path}`,
       critical: false,
-      url: `https://${host}/reliability.html`,
+      url: `https://${host}${path}`,
       redirect: 'manual',
-      acceptResponse: (response) => response.status >= 300 && response.status < 400,
+      acceptResponse: (response) => response.status === 301 || response.status === 308,
       condition: (_body, response) => response.headers.get('location') === location,
     })),
     {
@@ -257,6 +314,32 @@ function buildCheckDefinitions(env) {
   ];
 }
 
+function buildOperatorProbeDefinitions(env, observedAt) {
+  return OPERATOR_PROBES.map((probe) => {
+    const token = typeof env[probe.tokenEnv] === 'string' ? env[probe.tokenEnv].trim() : '';
+    const url = typeof env[probe.urlEnv] === 'string' && env[probe.urlEnv].trim() ? env[probe.urlEnv].trim() : probe.defaultURL;
+    let validURL = false;
+    try {
+      const parsed = new URL(url);
+      validURL = parsed.protocol === 'https:' && !parsed.username && !parsed.password && !parsed.search && !parsed.hash;
+    } catch {
+      validURL = false;
+    }
+    if (!token) return configurationUnknown({ id: probe.id, name: probe.name, critical: false, observedAt, env, reason: `${probe.tokenEnv} is absent` });
+    if (!validURL) return configurationUnknown({ id: probe.id, name: probe.name, critical: false, observedAt, env, reason: `${probe.urlEnv} must be an HTTPS origin-only URL` });
+    return {
+      id: probe.id,
+      name: probe.name,
+      critical: false,
+      url,
+      headers: { authorization: `Bearer ${token}` },
+      redirect: 'manual',
+      acceptResponse: (response) => response.status >= 200 && response.status < 300 && response.headers.get('content-type')?.toLowerCase().includes('text/html'),
+      condition: (body) => !/(?:oauth2\/start|sign[ -]?in|log[ -]?in)/iu.test(body),
+    };
+  });
+}
+
 async function observe({ env = process.env, fetchImpl = globalThis.fetch, runProcessImpl = runProcess, now = Date.now(), pongScript }) {
   if (typeof fetchImpl !== 'function') throw new MonitorError('fetch is not available');
   if (!pongScript) throw new MonitorError('pong synthetic script is required');
@@ -276,6 +359,11 @@ async function observe({ env = process.env, fetchImpl = globalThis.fetch, runPro
         retryDelayMs,
       }));
     }
+  }
+  for (const definition of buildOperatorProbeDefinitions(env, observedAt)) {
+    checks.push(definition.outcome
+      ? definition
+      : await fetchCheck({ ...definition, fetchImpl, timeoutMs: Number(env.STATUS_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS, observedAt, env, attempts, retryDelayMs, redirect: definition.redirect, acceptResponse: definition.acceptResponse }));
   }
   return { observedAt, checks };
 }
@@ -331,23 +419,30 @@ function previousIncidentStart(records, componentID, fallback) {
 }
 
 function deriveComponents(checks, history) {
-  return Object.entries(COMPONENTS).map(([id, definition]) => {
+  return Object.entries(COMPONENTS)
+    .filter(([, definition]) => definition.checks.some((checkID) => checks.some((check) => check.id === checkID)))
+    .map(([id, definition]) => {
     const componentChecks = definition.checks.map((checkID) => checks.find((check) => check.id === checkID)).filter(Boolean);
     const passed = componentChecks.length === definition.checks.length && componentChecks.every((check) => check.passed);
     const failed = componentChecks.some((check) => !check.passed);
+    const unknownOnly = componentChecks.some((check) => check.outcome === 'configuration_unknown')
+      && !componentChecks.some((check) => !check.passed && check.outcome !== 'configuration_unknown');
     const failures = failed ? previousConsecutive(history, id, 'raw_pass', false) + 1 : 0;
     const successes = passed ? previousConsecutive(history, id, 'raw_pass', true) + 1 : 0;
     const prior = previousStatus(history, id);
     let status = 'operational';
-    if (failed) status = definition.critical && failures >= POLICY.failure_threshold ? 'incident' : 'degraded';
+    if (unknownOnly) status = 'unknown';
+    else if (failed) status = definition.critical && failures >= POLICY.failure_threshold ? 'incident' : 'degraded';
     else if (prior === 'incident' && successes < POLICY.recovery_threshold) status = 'incident';
     else if (prior === 'degraded' && successes < POLICY.recovery_threshold) status = 'degraded';
     const failedCount = componentChecks.filter((check) => !check.passed).length;
     const summary = status === 'operational'
       ? 'All configured external checks passed.'
-      : status === 'incident'
-        ? `${failedCount} critical external check${failedCount === 1 ? '' : 's'} failed.`
-        : 'An external check is not currently healthy; confirmation is pending.';
+      : status === 'unknown'
+        ? 'Authenticated operator checks are not configured.'
+        : status === 'incident'
+          ? `${failedCount} critical external check${failedCount === 1 ? '' : 's'} failed.`
+          : 'An external check is not currently healthy; confirmation is pending.';
     const incidentStarted = status === 'incident' ? previousIncidentStart(history, id, componentChecks.find((check) => !check.passed)?.evidence_timestamp) : undefined;
     return {
       id,
@@ -423,7 +518,15 @@ function toHistoryRecord({ observationID, observedAt, checks, components, status
     observed_at: observedAt,
     status,
     critical_pass: components.filter((component) => component.critical).every((component) => component.raw_pass),
-    checks: checks.map((check) => ({ id: check.id, passed: check.passed, duration_ms: check.duration_ms })),
+    checks: checks.map((check) => ({
+      id: check.id,
+      passed: check.passed,
+      duration_ms: Number.isInteger(check.duration_ms) ? Math.max(0, Math.min(check.duration_ms, 120_000)) : 0,
+      outcome: OUTCOMES.includes(check.outcome) ? check.outcome : (check.passed ? 'passed' : 'target_failure'),
+      failure_class: ['none', 'target', 'monitor', 'configuration'].includes(check.failure_class)
+        ? check.failure_class
+        : (check.passed ? 'none' : 'target'),
+    })),
     components: components.map((component) => ({
       id: component.id,
       status: component.status,
@@ -488,7 +591,13 @@ export async function runMonitor({
   const historyPath = join(resolve(historyDir), `${observation.observedAt.replace(/[-:.]/gu, '').replace(/Z$/u, 'Z')}-${observationID}.json`);
   await writeFile(resolve(output), `${JSON.stringify(artifact, null, 2)}\n`);
   await writeFile(historyPath, `${JSON.stringify(historyRecord, null, 2)}\n`);
-  return { artifact, historyRecord, failed: observation.checks.some((check) => !check.passed), historyPath: relative(process.cwd(), historyPath) };
+  return {
+    artifact,
+    historyRecord,
+    failed: observation.checks.some((check) => check.outcome === 'target_failure' || check.outcome === 'monitor_failure'),
+    configuration_unknown: observation.checks.some((check) => check.outcome === 'configuration_unknown'),
+    historyPath: relative(process.cwd(), historyPath),
+  };
 }
 
 export async function main(argv = process.argv.slice(2), env = process.env) {

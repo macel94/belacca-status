@@ -26,7 +26,7 @@ export const SERVICE_DEFINITIONS = [
     name: 'Analytics',
     component: 'analytics',
     checks: ['analytics-status', 'analytics-count'],
-    indicator: 'Successful external analytics status and harmless collector observation',
+    indicator: 'Successful external HTTPS GET /status and same-origin /count requests',
   },
 ];
 
@@ -75,6 +75,27 @@ function validComponent(component) {
     && typeof component.raw_pass === 'boolean';
 }
 
+const HISTORY_OUTCOMES = new Set(['passed', 'target_failure', 'monitor_failure', 'configuration_unknown']);
+const HISTORY_FAILURE_CLASSES = new Set(['none', 'target', 'monitor', 'configuration']);
+
+function parseHistoryCheck(check) {
+  if (!check || typeof check !== 'object' || Array.isArray(check) || typeof check.id !== 'string' || typeof check.passed !== 'boolean') return null;
+  if (Object.hasOwn(check, 'duration_ms') && (!Number.isInteger(check.duration_ms) || check.duration_ms < 0 || check.duration_ms > 120000)) throw new Error('history check has invalid duration_ms');
+  if (Object.hasOwn(check, 'outcome') && !HISTORY_OUTCOMES.has(check.outcome)) throw new Error('history check has invalid outcome');
+  if (Object.hasOwn(check, 'failure_class') && !HISTORY_FAILURE_CLASSES.has(check.failure_class)) throw new Error('history check has invalid failure_class');
+  if (Object.hasOwn(check, 'outcome') && Object.hasOwn(check, 'failure_class')) {
+    const expectedClass = { passed: 'none', target_failure: 'target', monitor_failure: 'monitor', configuration_unknown: 'configuration' }[check.outcome];
+    if (check.failure_class !== expectedClass || (check.outcome === 'passed') !== check.passed) throw new Error('history check outcome is inconsistent');
+  }
+  return {
+    id: check.id,
+    passed: check.passed,
+    ...(Object.hasOwn(check, 'duration_ms') ? { duration_ms: check.duration_ms } : {}),
+    ...(Object.hasOwn(check, 'outcome') ? { outcome: check.outcome } : {}),
+    ...(Object.hasOwn(check, 'failure_class') ? { failure_class: check.failure_class } : {}),
+  };
+}
+
 export function parseHistoryRecord(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('history record must be an object');
   if (value.schema_version !== 'belacca.observation.v1') throw new Error('unsupported history schema_version');
@@ -86,9 +107,7 @@ export function parseHistoryRecord(value) {
     schema_version: 'belacca.observation.v1',
     observed_at: new Date(value.observed_at).toISOString(),
     checks: Array.isArray(value.checks)
-      ? value.checks
-        .filter((check) => check && typeof check.id === 'string' && typeof check.passed === 'boolean')
-        .map((check) => ({ id: check.id, passed: check.passed }))
+      ? value.checks.map(parseHistoryCheck).filter(Boolean)
       : [],
     components: value.components.map((component) => ({
       id: component.id,
