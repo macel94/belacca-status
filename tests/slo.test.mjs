@@ -81,6 +81,36 @@ test('malformed records outside the evaluated window do not poison a complete wi
   assert.equal(artifact.evaluation.invalid_records, 0);
 });
 
+test('newer malformed evidence advances the rolling window and withholds claims', () => {
+  const artifact = buildSloArtifact({
+    records: completeHistory(),
+    invalidRecords: 1,
+    invalidTimestamps: [END + HOUR_MS],
+    now: END,
+    env,
+  });
+  assert.equal(artifact.generated_at, new Date(END + HOUR_MS).toISOString());
+  assert.equal(artifact.evaluation.invalid_records, 1);
+  for (const service of artifact.services) {
+    assert.equal(service.state, 'insufficient_data');
+    assert.equal(service.counts.invalid_records, 1);
+    assert.equal(service.counts.unknown_slots, 1);
+    assert.equal(service.sli_percent, null);
+    assert.equal(service.error_budget, null);
+  }
+});
+
+test('raw component failures remain bad even when all configured checks are healthy', () => {
+  const records = completeHistory();
+  records.at(-1).components.find((component) => component.id === 'portfolio').raw_pass = false;
+  const artifact = buildSloArtifact({ records, now: END, env });
+  const portfolio = artifact.services.find((service) => service.id === 'portfolio');
+  assert.equal(portfolio.state, 'reportable');
+  assert.equal(portfolio.counts.good_slots, WINDOW_HOURS - 1);
+  assert.equal(portfolio.counts.bad_slots, 1);
+  assert.equal(portfolio.sli_percent, 99.861111);
+});
+
 test('legacy analytics observations without the collector check remain unknown', () => {
   const records = completeHistory();
   records[records.length - 1] = historyRecord(END, { legacyAnalytics: true });

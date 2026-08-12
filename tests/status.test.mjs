@@ -192,6 +192,7 @@ test('persistent failures remain failures after the retry budget is exhausted', 
   assert.equal(result.failed, true);
   assert.equal(journeyAttempts, 2);
   assert.equal(result.artifact.components.find((item) => item.id === 'pong').status, 'degraded');
+  assert.equal(result.historyRecord.components.find((item) => item.id === 'pong').raw_pass, false);
 });
 
 test('monitor checks analytics collector paths and portfolio redirects without following redirects', async () => {
