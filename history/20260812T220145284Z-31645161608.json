@@ -1,0 +1,81 @@
+{
+  "schema_version": "belacca.observation.v1",
+  "observation_id": "31645161608",
+  "observed_at": "2026-08-12T22:01:45.284Z",
+  "status": "degraded",
+  "critical_pass": false,
+  "checks": [
+    {
+      "id": "portfolio-redirect-belacca-com",
+      "passed": true,
+      "duration_ms": 491
+    },
+    {
+      "id": "portfolio-redirect-www-belacca-com",
+      "passed": true,
+      "duration_ms": 403
+    },
+    {
+      "id": "portfolio-redirect-www-francesco-belacca-com",
+      "passed": true,
+      "duration_ms": 372
+    },
+    {
+      "id": "portfolio-health",
+      "passed": true,
+      "duration_ms": 2041
+    },
+    {
+      "id": "portfolio-homepage",
+      "passed": true,
+      "duration_ms": 288
+    },
+    {
+      "id": "pong-health",
+      "passed": true,
+      "duration_ms": 586
+    },
+    {
+      "id": "pong-homepage",
+      "passed": true,
+      "duration_ms": 321
+    },
+    {
+      "id": "pong-journey",
+      "passed": false,
+      "duration_ms": 94912
+    },
+    {
+      "id": "analytics-status",
+      "passed": true,
+      "duration_ms": 500
+    },
+    {
+      "id": "analytics-count",
+      "passed": true,
+      "duration_ms": 157
+    },
+    {
+      "id": "analytics-count-js",
+      "passed": true,
+      "duration_ms": 1318
+    }
+  ],
+  "components": [
+    {
+      "id": "portfolio",
+      "status": "operational",
+      "raw_pass": true
+    },
+    {
+      "id": "pong",
+      "status": "degraded",
+      "raw_pass": false
+    },
+    {
+      "id": "analytics",
+      "status": "operational",
+      "raw_pass": true
+    }
+  ]
+}
