@@ -164,12 +164,20 @@ function latestRecord(records) {
   }, null);
 }
 
+function latestEvidenceTimestamp(records, invalidTimestamps, fallback) {
+  const validTimestamp = latestRecord(records) ? Date.parse(latestRecord(records).observed_at) : null;
+  const timestamps = [validTimestamp, ...invalidTimestamps].filter((timestamp) => Number.isFinite(timestamp));
+  return timestamps.length > 0 ? Math.max(...timestamps) : fallback;
+}
+
 function serviceValue(record, service) {
   const component = record.components.find((item) => item.id === service.component);
   if (!component) return null;
   const checks = new Map(record.checks.map((check) => [check.id, check.passed]));
   if (service.checks.some((checkID) => !checks.has(checkID))) return null;
-  return service.checks.every((checkID) => checks.get(checkID) === true);
+  // raw_pass is the monitor's aggregate result and must remain authoritative:
+  // hysteresis changes the displayed status, never the recorded probe outcome.
+  return component.raw_pass === true && service.checks.every((checkID) => checks.get(checkID) === true);
 }
 
 function calculateService(service, records, invalidRecords, invalidTimestamps, evaluationEnd, env) {
@@ -265,8 +273,9 @@ function calculateService(service, records, invalidRecords, invalidTimestamps, e
 
 export function buildSloArtifact({ records = [], invalidRecords = 0, invalidTimestamps = [], now = Date.now(), env = process.env } = {}) {
   const parsedRecords = records.map(parseHistoryRecord);
-  const latest = latestRecord(parsedRecords);
-  const evaluationEnd = latest?.observed_at || iso(Math.floor(now / HOUR_MS) * HOUR_MS);
+  const fallbackEnd = Math.floor(now / HOUR_MS) * HOUR_MS;
+  const evidenceTimestamp = latestEvidenceTimestamp(parsedRecords, invalidTimestamps, fallbackEnd);
+  const evaluationEnd = iso(Math.floor(evidenceTimestamp / HOUR_MS) * HOUR_MS);
   const endSlot = slotTime(evaluationEnd);
   const windowStart = endSlot - (WINDOW_HOURS - 1) * HOUR_MS;
   const windowEnd = endSlot + HOUR_MS;
