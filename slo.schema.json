@@ -87,12 +87,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "scope", "state", "target", "target_percent", "window", "cadence", "indicator", "evaluation_window", "counts", "coverage_percent", "sli_percent", "error_budget", "latest_evidence_timestamp", "source_references"],
+        "required": ["id", "name", "scope", "state", "measurement_window", "target", "target_percent", "window", "cadence", "indicator", "evaluation_window", "counts", "coverage_percent", "sli_percent", "error_budget", "latest_evidence_timestamp", "source_references"],
         "properties": {
           "id": { "enum": ["portfolio", "pong", "analytics"] },
           "name": { "type": "string", "minLength": 1, "maxLength": 120 },
           "scope": { "const": "public" },
-          "state": { "enum": ["not_configured", "insufficient_data", "reportable"] },
+          "state": { "enum": ["not_configured", "measured", "reportable"] },
+          "measurement_window": { "enum": ["available_history", "rolling_30d"] },
           "target": { "const": 0.99 },
           "target_percent": { "const": "99%" },
           "window": { "const": "30d" },
@@ -129,7 +130,7 @@
             "additionalProperties": false,
             "required": ["allowed_bad_slots", "consumed_bad_slots", "consumed_percent", "remaining_bad_slots", "remaining_percent"],
             "properties": {
-              "allowed_bad_slots": { "const": 7.2 },
+              "allowed_bad_slots": { "type": "number", "minimum": 0 },
               "consumed_bad_slots": { "type": "integer", "minimum": 0, "maximum": 720 },
               "consumed_percent": { "type": "number", "minimum": 0 },
               "remaining_bad_slots": { "type": "number", "minimum": 0 },

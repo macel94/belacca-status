@@ -39,7 +39,7 @@ export const SLO_POLICY = {
   window: '30d',
   window_hours: WINDOW_HOURS,
   cadence: '1h',
-  unknown_policy: 'Missing or malformed observation slots are unknown and prevent a numeric SLO claim.',
+  unknown_policy: 'Missing or malformed observation slots are unknown, remain in coverage counts, and never count as success.',
   sla: false,
   service_credits: false,
   recovery_objective: {
@@ -164,6 +164,13 @@ function latestRecord(records) {
   }, null);
 }
 
+function earliestRecord(records) {
+  return records.reduce((earliest, record) => {
+    if (!earliest || Date.parse(record.observed_at) < Date.parse(earliest.observed_at)) return record;
+    return earliest;
+  }, null);
+}
+
 function latestEvidenceTimestamp(records, invalidTimestamps, fallback) {
   const validTimestamp = latestRecord(records) ? Date.parse(latestRecord(records).observed_at) : null;
   const timestamps = [validTimestamp, ...invalidTimestamps].filter((timestamp) => Number.isFinite(timestamp));
@@ -222,14 +229,16 @@ function calculateService(service, records, invalidRecords, invalidTimestamps, e
 
   const observedSlots = goodSlots + badSlots;
   const complete = unknownSlots === 0 && invalidRecordsInWindow === 0;
-  const state = observedSlots === 0
-    ? 'not_configured'
-    : complete
-      ? 'reportable'
-      : 'insufficient_data';
-  const reportable = state === 'reportable';
-  const allowedBadSlots = WINDOW_HOURS * (1 - SLO_TARGET);
-  const errorBudget = reportable
+  const state = observedSlots === 0 ? 'not_configured' : complete ? 'reportable' : 'measured';
+  const earliest = earliestRecord(records);
+  const latest = latestRecord(records);
+  const hasRollingHorizon = earliest && latest && Date.parse(latest.observed_at) - Date.parse(earliest.observed_at) >= (WINDOW_HOURS - 1) * HOUR_MS;
+  const measurement_window = observedSlots > 0 && hasRollingHorizon ? 'rolling_30d' : 'available_history';
+  // Before 30 days, report the measured level over the observations that exist.
+  // Once the horizon is complete, the same calculation covers the last 720
+  // hourly slots. Unknown slots remain visible through coverage_percent.
+  const allowedBadSlots = observedSlots * (1 - SLO_TARGET);
+  const errorBudget = observedSlots > 0
     ? {
         allowed_bad_slots: rounded(allowedBadSlots),
         consumed_bad_slots: badSlots,
@@ -244,6 +253,7 @@ function calculateService(service, records, invalidRecords, invalidTimestamps, e
     name: service.name,
     scope: 'public',
     state,
+    measurement_window,
     target: SLO_TARGET,
     target_percent: '99%',
     window: '30d',
@@ -264,7 +274,7 @@ function calculateService(service, records, invalidRecords, invalidTimestamps, e
       invalid_records: invalidRecordsInWindow,
     },
     coverage_percent: rounded((observedSlots / WINDOW_HOURS) * 100),
-    sli_percent: reportable ? rounded((goodSlots / WINDOW_HOURS) * 100) : null,
+    sli_percent: observedSlots > 0 ? rounded((goodSlots / observedSlots) * 100) : null,
     error_budget: errorBudget,
     latest_evidence_timestamp: latestRecord(records)?.observed_at || null,
     source_references: sourceReferences(env, service.id),
@@ -304,7 +314,8 @@ export function buildSloArtifact({ records = [], invalidRecords = 0, invalidTime
       'This is sanitized SLO evidence for an internal 99% objective, not an SLA or service-credit commitment.',
       'The SLI is a sampled hourly external-observation proxy for availability; missing slots never count as success.',
       'SLO evidence is separate from public status, incident hysteresis, paging, and operator notification.',
-      'Numeric SLO and error-budget values appear only for complete, valid rolling windows.',
+      'The current measured level uses good observed slots divided by good plus bad observed slots; missing slots are shown as coverage context and never count as success.',
+      'Before the evidence spans 30 days, the measurement window is available history; thereafter it is the latest rolling 30-day horizon.'
     ],
   };
 }

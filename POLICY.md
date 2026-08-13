@@ -60,10 +60,13 @@ hourly slots. This objective is not an SLA and does not provide service credits.
 
 The sanitized [`slo.json`](slo.json) artifact is generated from the durable
 history records and is separate from `status.json`, public incident state, and
-status hysteresis. A missing hourly slot, a missing component, or a malformed
-history record is unknown and never counts as success. Numeric SLO and
-error-budget values are withheld until the complete 720-slot window is valid.
-The source history contract remains `belacca.observation.v1`.
+status hysteresis. The current measured level is `good observed slots / (good
+observed slots + bad observed slots)`. Before the evidence spans 30 days, the
+denominator is the observations already available; once it spans 30 days, the
+calculation uses the latest 720 hourly slots. A missing hourly slot, a missing
+component, or a malformed history record is unknown, remains in the coverage
+counts, and never counts as success. The source history contract remains
+`belacca.observation.v1`.
 
 A controlled-drill recovery objective under six minutes is a separate
 operational exercise. It is represented as policy context only and is excluded

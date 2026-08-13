@@ -15,10 +15,13 @@ hour. It also publishes [`slo.json`](slo.json), a sanitized
 [`POLICY.md`](POLICY.md) for the publication and failure-domain boundary.
 
 Each supported public application has an internal 99% availability objective;
-this is not an SLA and carries no service credit. Missing or malformed hourly
-slots keep SLO values unknown until the full 720-slot window is valid. A
-controlled-drill recovery objective under six minutes is separate policy context
-and is excluded from availability arithmetic.
+this is not an SLA and carries no service credit. `slo.json` reports the current
+measured level as `good observations / (good + bad observations)` using the
+observations already available. It switches to the latest rolling 30-day slot
+window once the history spans 30 days. Missing or malformed slots remain visible
+as coverage context and never count as good. A controlled-drill recovery
+objective under six minutes is separate policy context and is excluded from
+availability arithmetic.
 
 Authenticated dashboard and Flux checks are optional diagnostics. They use only
 short-lived, operator-managed bearer credentials supplied as GitHub Actions
@@ -32,8 +35,9 @@ these secrets until one is approved and the endpoint accepts this probe safely.
 The repository is intentionally not a Kubernetes status API or paging system.
 The website reads only the public `status.json` artifact from GitHub and falls
 back to its checked-in unknown state if the artifact is missing, malformed, or
-expired. `slo.json` is durable reliability evidence, not a public uptime claim;
-its 99%/30d values remain non-reportable until the complete valid window exists.
+expired. `slo.json` is durable reliability evidence, not a public uptime claim; its
+current measured levels are published immediately from observed evidence, while
+the coverage and measurement window are shown alongside them.
 The first reviewed commit is also used as the platform submodule pointer for
 local workspace review.
 

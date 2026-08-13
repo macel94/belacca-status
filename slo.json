@@ -13,7 +13,7 @@
     "window": "30d",
     "window_hours": 720,
     "cadence": "1h",
-    "unknown_policy": "Missing or malformed observation slots are unknown and prevent a numeric SLO claim.",
+    "unknown_policy": "Missing or malformed observation slots are unknown, remain in coverage counts, and never count as success.",
     "sla": false,
     "service_credits": false,
     "recovery_objective": {
@@ -38,7 +38,8 @@
       "id": "portfolio",
       "name": "Portfolio",
       "scope": "public",
-      "state": "insufficient_data",
+      "state": "measured",
+      "measurement_window": "available_history",
       "target": 0.99,
       "target_percent": "99%",
       "window": "30d",
@@ -59,11 +60,17 @@
         "invalid_records": 0
       },
       "coverage_percent": 14.583333,
-      "sli_percent": null,
-      "error_budget": null,
+      "sli_percent": 100,
+      "error_budget": {
+        "allowed_bad_slots": 1.05,
+        "consumed_bad_slots": 0,
+        "consumed_percent": 0,
+        "remaining_bad_slots": 1.05,
+        "remaining_percent": 100
+      },
       "latest_evidence_timestamp": "2026-08-13T06:44:38.986Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31674970920",
+        "https://github.com/macel94/belacca-status/actions",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio"
       ]
     },
@@ -71,7 +78,8 @@
       "id": "pong",
       "name": "Cloud Native Pong",
       "scope": "public",
-      "state": "insufficient_data",
+      "state": "measured",
+      "measurement_window": "available_history",
       "target": 0.99,
       "target_percent": "99%",
       "window": "30d",
@@ -92,11 +100,17 @@
         "invalid_records": 0
       },
       "coverage_percent": 14.583333,
-      "sli_percent": null,
-      "error_budget": null,
+      "sli_percent": 76.190476,
+      "error_budget": {
+        "allowed_bad_slots": 1.05,
+        "consumed_bad_slots": 25,
+        "consumed_percent": 2380.952381,
+        "remaining_bad_slots": 0,
+        "remaining_percent": 0
+      },
       "latest_evidence_timestamp": "2026-08-13T06:44:38.986Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31674970920",
+        "https://github.com/macel94/belacca-status/actions",
         "https://github.com/macel94/belacca-status/tree/main/history#pong"
       ]
     },
@@ -104,7 +118,8 @@
       "id": "analytics",
       "name": "Analytics",
       "scope": "public",
-      "state": "insufficient_data",
+      "state": "measured",
+      "measurement_window": "available_history",
       "target": 0.99,
       "target_percent": "99%",
       "window": "30d",
@@ -125,23 +140,30 @@
         "invalid_records": 0
       },
       "coverage_percent": 9.444444,
-      "sli_percent": null,
-      "error_budget": null,
+      "sli_percent": 100,
+      "error_budget": {
+        "allowed_bad_slots": 0.68,
+        "consumed_bad_slots": 0,
+        "consumed_percent": 0,
+        "remaining_bad_slots": 0.68,
+        "remaining_percent": 100
+      },
       "latest_evidence_timestamp": "2026-08-13T06:44:38.986Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31674970920",
+        "https://github.com/macel94/belacca-status/actions",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics"
       ]
     }
   ],
   "source_references": [
-    "https://github.com/macel94/belacca-status/actions/runs/31674970920",
+    "https://github.com/macel94/belacca-status/actions",
     "https://github.com/macel94/belacca-status/tree/main/history#platform"
   ],
   "notes": [
     "This is sanitized SLO evidence for an internal 99% objective, not an SLA or service-credit commitment.",
     "The SLI is a sampled hourly external-observation proxy for availability; missing slots never count as success.",
     "SLO evidence is separate from public status, incident hysteresis, paging, and operator notification.",
-    "Numeric SLO and error-budget values appear only for complete, valid rolling windows."
+    "The current measured level uses good observed slots divided by good plus bad observed slots; missing slots are shown as coverage context and never count as success.",
+    "Before the evidence spans 30 days, the measurement window is available history; thereafter it is the latest rolling 30-day horizon."
   ]
 }

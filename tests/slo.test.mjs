@@ -38,18 +38,32 @@ function completeHistory(values = {}) {
   return Array.from({ length: WINDOW_HOURS }, (_, index) => historyRecord(END - (WINDOW_HOURS - 1 - index) * 60 * 60 * 1000, values));
 }
 
-test('incomplete rolling windows expose coverage but no numeric SLO or budget', () => {
+test('incomplete rolling windows report the current measured level and coverage', () => {
   const artifact = buildSloArtifact({ records: [historyRecord(END)], now: END, env });
   for (const service of artifact.services) {
-    assert.equal(service.state, 'insufficient_data');
+    assert.equal(service.state, 'measured');
+    assert.equal(service.measurement_window, 'available_history');
     assert.equal(service.counts.unknown_slots, WINDOW_HOURS - 1);
-    assert.equal(service.sli_percent, null);
-    assert.equal(service.error_budget, null);
+    assert.equal(service.sli_percent, 100);
+    assert.equal(service.error_budget.allowed_bad_slots, 0.01);
+    assert.equal(service.error_budget.consumed_bad_slots, 0);
   }
   assert.equal(artifact.policy.sla, false);
   assert.equal(artifact.policy.service_credits, false);
   assert.equal(artifact.policy.recovery_objective.excluded_from_availability_arithmetic, true);
   validateSlo(artifact);
+});
+
+test('a service with no observations stays available-history while others use the rolling horizon', () => {
+  const records = completeHistory();
+  records.forEach((record) => { record.components = record.components.filter((component) => component.id !== 'analytics'); });
+  const artifact = buildSloArtifact({ records, now: END, env });
+  const analytics = artifact.services.find((service) => service.id === 'analytics');
+  assert.equal(analytics.state, 'not_configured');
+  assert.equal(analytics.measurement_window, 'available_history');
+  assert.equal(analytics.sli_percent, null);
+  assert.equal(analytics.error_budget, null);
+  assert.equal(artifact.services.find((service) => service.id === 'portfolio').measurement_window, 'rolling_30d');
 });
 
 test('missing component slots are unknown only for the affected application', () => {
@@ -59,10 +73,11 @@ test('missing component slots are unknown only for the affected application', ()
   assert.equal(artifact.services.find((service) => service.id === 'portfolio').state, 'reportable');
   assert.equal(artifact.services.find((service) => service.id === 'pong').state, 'reportable');
   const analytics = artifact.services.find((service) => service.id === 'analytics');
-  assert.equal(analytics.state, 'insufficient_data');
+  assert.equal(analytics.state, 'measured');
+  assert.equal(analytics.measurement_window, 'rolling_30d');
   assert.equal(analytics.counts.unknown_slots, 1);
-  assert.equal(analytics.sli_percent, null);
-  assert.equal(analytics.error_budget, null);
+  assert.equal(analytics.sli_percent, 100);
+  assert.equal(analytics.error_budget.allowed_bad_slots, 7.19);
 });
 
 test('malformed records outside the evaluated window do not poison a complete window', () => {
@@ -81,7 +96,7 @@ test('malformed records outside the evaluated window do not poison a complete wi
   assert.equal(artifact.evaluation.invalid_records, 0);
 });
 
-test('newer malformed evidence advances the rolling window and withholds claims', () => {
+test('newer malformed evidence advances the rolling window while retaining measured claims', () => {
   const artifact = buildSloArtifact({
     records: completeHistory(),
     invalidRecords: 1,
@@ -92,11 +107,12 @@ test('newer malformed evidence advances the rolling window and withholds claims'
   assert.equal(artifact.generated_at, new Date(END + HOUR_MS).toISOString());
   assert.equal(artifact.evaluation.invalid_records, 1);
   for (const service of artifact.services) {
-    assert.equal(service.state, 'insufficient_data');
+    assert.equal(service.state, 'measured');
+    assert.equal(service.measurement_window, 'rolling_30d');
     assert.equal(service.counts.invalid_records, 1);
     assert.equal(service.counts.unknown_slots, 1);
-    assert.equal(service.sli_percent, null);
-    assert.equal(service.error_budget, null);
+    assert.equal(service.sli_percent, 100);
+    assert.equal(service.error_budget.allowed_bad_slots, 7.19);
   }
 });
 
@@ -111,17 +127,18 @@ test('raw component failures remain bad even when all configured checks are heal
   assert.equal(portfolio.sli_percent, 99.861111);
 });
 
-test('legacy analytics observations without the collector check remain unknown', () => {
+test('legacy analytics observations without the collector check remain measured with visible coverage gap', () => {
   const records = completeHistory();
   records[records.length - 1] = historyRecord(END, { legacyAnalytics: true });
   const artifact = buildSloArtifact({ records, now: END, env });
   const analytics = artifact.services.find((service) => service.id === 'analytics');
-  assert.equal(analytics.state, 'insufficient_data');
+  assert.equal(analytics.state, 'measured');
+  assert.equal(analytics.measurement_window, 'rolling_30d');
   assert.equal(analytics.counts.unknown_slots, 1);
-  assert.equal(analytics.sli_percent, null);
+  assert.equal(analytics.sli_percent, 100);
 });
 
-test('malformed records inside an expected slot remain unknown', () => {
+test('malformed records inside an expected slot keep the measured level and expose coverage gap', () => {
   const artifact = buildSloArtifact({
     records: completeHistory(),
     invalidRecords: 1,
@@ -130,19 +147,22 @@ test('malformed records inside an expected slot remain unknown', () => {
     env,
   });
   for (const service of artifact.services) {
-    assert.equal(service.state, 'insufficient_data');
+    assert.equal(service.state, 'measured');
+    assert.equal(service.measurement_window, 'rolling_30d');
     assert.equal(service.counts.invalid_records, 1);
     assert.equal(service.counts.unknown_slots, 1);
-    assert.equal(service.sli_percent, null);
+    assert.equal(service.sli_percent, 100);
+    assert.equal(service.error_budget.allowed_bad_slots, 7.19);
   }
 });
 
-test('malformed records without a location prevent numeric claims', () => {
+test('malformed records without a location retain observed numeric claims', () => {
   const artifact = buildSloArtifact({ records: completeHistory(), invalidRecords: 1, now: END, env });
   for (const service of artifact.services) {
-    assert.equal(service.state, 'insufficient_data');
-    assert.equal(service.sli_percent, null);
-    assert.equal(service.error_budget, null);
+    assert.equal(service.state, 'measured');
+    assert.equal(service.measurement_window, 'rolling_30d');
+    assert.equal(service.sli_percent, 100);
+    assert.equal(service.error_budget.allowed_bad_slots, 7.2);
     assert.equal(service.counts.invalid_records, 1);
   }
   assert.throws(() => parseHistoryRecord({ schema_version: 'other', observed_at: new Date(END).toISOString(), components: [] }), /schema_version/);
@@ -168,6 +188,7 @@ test('complete windows report the 99 percent objective and error budget', () => 
   const portfolio = artifact.services.find((service) => service.id === 'portfolio');
   const pong = artifact.services.find((service) => service.id === 'pong');
   assert.equal(portfolio.state, 'reportable');
+  assert.equal(portfolio.measurement_window, 'rolling_30d');
   assert.equal(portfolio.sli_percent, 100);
   assert.equal(portfolio.error_budget.allowed_bad_slots, Number((WINDOW_HOURS * (1 - SLO_TARGET)).toFixed(6)));
   assert.equal(portfolio.error_budget.remaining_bad_slots, 7.2);

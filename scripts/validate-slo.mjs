@@ -37,31 +37,32 @@ function validateCounts(counts) {
   if (counts.expected_slots !== WINDOW_HOURS || counts.observed_slots !== counts.good_slots + counts.bad_slots || counts.observed_slots + counts.unknown_slots !== WINDOW_HOURS || counts.good_slots + counts.bad_slots > WINDOW_HOURS) fail('inconsistent SLO counts');
 }
 
-function validateErrorBudget(value, badSlots) {
+function validateErrorBudget(value, badSlots, observedSlots) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid error budget');
   object(value, ['allowed_bad_slots', 'consumed_bad_slots', 'consumed_percent', 'remaining_bad_slots', 'remaining_percent'], ['allowed_bad_slots', 'consumed_bad_slots', 'consumed_percent', 'remaining_bad_slots', 'remaining_percent']);
-  if (value.allowed_bad_slots !== 7.2 || value.consumed_bad_slots !== badSlots || !finiteNumber(value.consumed_percent) || !finiteNumber(value.remaining_bad_slots) || !finiteNumber(value.remaining_percent) || value.consumed_percent < 0 || value.remaining_bad_slots < 0 || value.remaining_percent < 0 || value.remaining_percent > 100) fail('invalid error budget values');
+  const allowedBadSlots = rounded(observedSlots * (1 - SLO_TARGET));
+  if (value.allowed_bad_slots !== allowedBadSlots || value.consumed_bad_slots !== badSlots || !finiteNumber(value.consumed_percent) || !finiteNumber(value.remaining_bad_slots) || !finiteNumber(value.remaining_percent) || value.consumed_percent < 0 || value.remaining_bad_slots < 0 || value.remaining_percent < 0 || value.remaining_percent > 100) fail('invalid error budget values');
 }
 
 function validateService(service, index, evaluationEnd) {
   const definition = SERVICE_DEFINITIONS[index];
-  object(service, ['id', 'name', 'scope', 'state', 'target', 'target_percent', 'window', 'cadence', 'indicator', 'evaluation_window', 'counts', 'coverage_percent', 'sli_percent', 'error_budget', 'latest_evidence_timestamp', 'source_references'], [
-    'id', 'name', 'scope', 'state', 'target', 'target_percent', 'window', 'cadence', 'indicator', 'evaluation_window', 'counts', 'coverage_percent', 'sli_percent', 'error_budget', 'latest_evidence_timestamp', 'source_references',
+  object(service, ['id', 'name', 'scope', 'state', 'measurement_window', 'target', 'target_percent', 'window', 'cadence', 'indicator', 'evaluation_window', 'counts', 'coverage_percent', 'sli_percent', 'error_budget', 'latest_evidence_timestamp', 'source_references'], [
+    'id', 'name', 'scope', 'state', 'measurement_window', 'target', 'target_percent', 'window', 'cadence', 'indicator', 'evaluation_window', 'counts', 'coverage_percent', 'sli_percent', 'error_budget', 'latest_evidence_timestamp', 'source_references',
   ]);
-  if (service.id !== definition.id || service.name !== definition.name || service.scope !== 'public' || !['not_configured', 'insufficient_data', 'reportable'].includes(service.state) || service.target !== SLO_TARGET || service.target_percent !== '99%' || service.window !== '30d' || service.cadence !== '1h' || !nonEmpty(service.indicator, 300)) fail('invalid service policy');
+  if (service.id !== definition.id || service.name !== definition.name || service.scope !== 'public' || !['not_configured', 'measured', 'reportable'].includes(service.state) || !['available_history', 'rolling_30d'].includes(service.measurement_window) || service.target !== SLO_TARGET || service.target_percent !== '99%' || service.window !== '30d' || service.cadence !== '1h' || !nonEmpty(service.indicator, 300)) fail('invalid service policy');
   const window = service.evaluation_window;
   object(window, ['start', 'end', 'expected_slots'], ['start', 'end', 'expected_slots']);
   if (!isDate(window.start) || window.end !== evaluationEnd || !isDate(window.end) || window.expected_slots !== WINDOW_HOURS || Date.parse(window.end) - Date.parse(window.start) !== (WINDOW_HOURS - 1) * 60 * 60 * 1000) fail('invalid service evaluation window');
   validateCounts(service.counts);
   if (!finiteNumber(service.coverage_percent) || service.coverage_percent < 0 || service.coverage_percent > 100 || service.coverage_percent !== rounded((service.counts.observed_slots / WINDOW_HOURS) * 100)) fail('invalid service coverage');
   const complete = service.counts.unknown_slots === 0 && service.counts.invalid_records === 0;
-  const expectedState = service.counts.observed_slots === 0 ? 'not_configured' : complete ? 'reportable' : 'insufficient_data';
-  if (service.state !== expectedState) fail('invalid service state');
-  if (service.state === 'reportable') {
-    if (!finiteNumber(service.sli_percent) || service.sli_percent !== rounded((service.counts.good_slots / WINDOW_HOURS) * 100)) fail('invalid SLI');
-    validateErrorBudget(service.error_budget, service.counts.bad_slots);
-  } else if (service.sli_percent !== null || service.error_budget !== null) {
-    fail('numeric SLO values reported before the window completed');
+  const expectedState = service.counts.observed_slots === 0 ? 'not_configured' : complete ? 'reportable' : 'measured';
+  if (service.state !== expectedState || (service.state === 'reportable' && service.measurement_window !== 'rolling_30d') || (service.state === 'not_configured' && service.measurement_window !== 'available_history')) fail('invalid service measurement state');
+  if (service.state === 'not_configured') {
+    if (service.sli_percent !== null || service.error_budget !== null) fail('numeric values reported without observations');
+  } else {
+    if (!finiteNumber(service.sli_percent) || service.sli_percent !== rounded((service.counts.good_slots / service.counts.observed_slots) * 100)) fail('invalid SLI');
+    validateErrorBudget(service.error_budget, service.counts.bad_slots, service.counts.observed_slots);
   }
   if (service.latest_evidence_timestamp !== null && !isDate(service.latest_evidence_timestamp)) fail('invalid latest evidence timestamp');
   references(service.source_references);
