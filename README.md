@@ -34,10 +34,13 @@ these secrets until one is approved and the endpoint accepts this probe safely.
 
 The repository is intentionally not a Kubernetes status API or paging system.
 The website reads only the public `status.json` artifact from GitHub and falls
-back to its checked-in unknown state if the artifact is missing, malformed, or
-expired. `slo.json` is durable reliability evidence, not a public uptime claim; its
-current measured levels are published immediately from observed evidence, while
-the coverage and measurement window are shown alongside them.
+back to a freshness-safe unknown state if the artifact is missing, malformed, or
+expired. Published uptime is calculated from good and bad critical observations
+in the recent 24-hour window; short history is labeled `available history / 24h`
+with its observation count. `slo.json` is durable reliability evidence, not a
+public uptime claim; its current measured levels are published immediately from
+observed evidence, while coverage and measurement window are shown alongside
+them.
 The first reviewed commit is also used as the platform submodule pointer for
 local workspace review.
 

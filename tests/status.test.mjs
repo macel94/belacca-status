@@ -88,13 +88,23 @@ test('incident recovery requires two successful observations and records resolut
   assert.equal(secondRecovery.incidents[0].status, 'resolved');
 });
 
-test('uptime stays unconfigured until 24 sanitized observations exist', () => {
+test('uptime reports available history before a complete 24-hour window', () => {
   const history = Array.from({ length: 23 }, (_, index) => historyRecord(NOW - (23 - index) * 3600000, {}));
-  const before = buildArtifact({ observationID: 'u1', observedAt: new Date(NOW).toISOString(), checks: checks(), history, env }).artifact;
-  assert.equal(before.uptime.state, 'not_configured');
-  const ready = buildArtifact({ observationID: 'u2', observedAt: new Date(NOW + 3600000).toISOString(), checks: checks(), history: [...history, historyRecord(NOW, {})], env }).artifact;
-  assert.equal(ready.uptime.state, 'reported');
-  assert.equal(ready.uptime.value, 100);
+  const artifact = buildArtifact({ observationID: 'u1', observedAt: new Date(NOW).toISOString(), checks: checks(), history, env }).artifact;
+  assert.equal(artifact.uptime.state, 'reported');
+  assert.equal(artifact.uptime.value, 100);
+  assert.equal(artifact.uptime.window, 'available history / 24h');
+  assert.equal(artifact.uptime.observations, 24);
+  assert.equal(artifact.uptime.good_observations, 24);
+  assert.equal(artifact.uptime.bad_observations, 0);
+});
+
+test('uptime reports the current observation when no prior history exists', () => {
+  const artifact = buildArtifact({ observationID: 'u0', observedAt: new Date(NOW).toISOString(), checks: checks(), history: [], env }).artifact;
+  assert.equal(artifact.uptime.state, 'reported');
+  assert.equal(artifact.uptime.value, 100);
+  assert.equal(artifact.uptime.window, 'available history / 24h');
+  assert.equal(artifact.uptime.observations, 1);
 });
 
 test('bootstrap and published status artifacts satisfy the declared schema', async () => {

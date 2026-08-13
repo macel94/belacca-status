@@ -53,7 +53,6 @@ const DEFAULT_RETRY_DELAY_MS = 1_000;
 const MAX_RETRY_DELAY_MS = 30_000;
 const PONG_TIMEOUT_MS = 100_000;
 const UPTIME_WINDOW_MS = 24 * 60 * 60 * 1000;
-const MIN_UPTIME_OBSERVATIONS = 24;
 
 export class MonitorError extends Error {
   constructor(message, options) {
@@ -498,15 +497,26 @@ function calculateIncidents(components, history, observedAt, env) {
 }
 
 function calculateUptime(history, observedAt, env) {
-  const from = Date.parse(observedAt) - UPTIME_WINDOW_MS;
-  const observations = history.filter((record) => Date.parse(record.observed_at) >= from && Date.parse(record.observed_at) <= Date.parse(observedAt));
-  const span = observations.length > 1 ? Date.parse(observations.at(-1).observed_at) - Date.parse(observations[0].observed_at) : 0;
-  if (observations.length < MIN_UPTIME_OBSERVATIONS || span < UPTIME_WINDOW_MS) return { state: 'not_configured', value: null, window: '24h', source_reference: null };
+  const observedAtMs = Date.parse(observedAt);
+  const from = observedAtMs - UPTIME_WINDOW_MS;
+  const observations = history
+    .filter((record) => {
+      const timestamp = Date.parse(record.observed_at);
+      return timestamp >= from && timestamp <= observedAtMs;
+    })
+    .sort((a, b) => Date.parse(a.observed_at) - Date.parse(b.observed_at));
+  if (observations.length === 0) return { state: 'not_configured', value: null, window: '24h', source_reference: null };
   const good = observations.filter((record) => record.critical_pass === true).length;
+  const bad = observations.length - good;
+  const completeWindow = observations.length >= 24
+    && Date.parse(observations.at(-1).observed_at) - Date.parse(observations[0].observed_at) >= UPTIME_WINDOW_MS;
   return {
     state: 'reported',
     value: Number(((good / observations.length) * 100).toFixed(3)),
-    window: '24h',
+    window: completeWindow ? '24h' : 'available history / 24h',
+    observations: observations.length,
+    good_observations: good,
+    bad_observations: bad,
     source_reference: sourceReferences(env, 'uptime')[0],
   };
 }

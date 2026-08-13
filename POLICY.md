@@ -32,12 +32,12 @@ The dashboard and Flux UI require operator-managed identity and credentials.
 - `operational` means all critical checks passed.
 - `degraded` means a non-critical component failed.
 - `incident` means a critical component failed.
-- `unknown` means there is no valid, fresh observation.
+- `unknown` means there is no valid, fresh observation; the page explains this as awaiting fresh evidence rather than showing an absent configuration.
 - A failed check is still committed as a status artifact before the workflow
   exits unsuccessfully.
 - The artifact expires two hours after observation. The website must treat an
   expired or malformed artifact as `unknown`.
-- Uptime is not reported until at least 24 hours of hourly history exists.
+- Published uptime is reported from valid good/bad critical observations in the recent 24-hour window. When the history is shorter than a complete 24-hour horizon, the artifact reports `available history / 24h` and the observed count; it does not manufacture a full-window claim.
 - The published artifact contains no response bodies, room IDs, player names,
   addresses, tokens, cookies, internal hostnames, or raw exception messages. The
   collector probe uses only a fixed synthetic path/title and stores aggregate

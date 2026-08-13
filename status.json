@@ -25,10 +25,13 @@
     "recovery_threshold": 2
   },
   "uptime": {
-    "state": "not_configured",
-    "value": null,
-    "window": "24h",
-    "source_reference": null
+    "state": "reported",
+    "value": 31.25,
+    "window": "available history / 24h",
+    "observations": 16,
+    "good_observations": 5,
+    "bad_observations": 11,
+    "source_reference": "https://github.com/macel94/belacca-status/actions"
   },
   "components": [
     {

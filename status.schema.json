@@ -68,7 +68,10 @@
         "state": { "enum": ["not_configured", "reported"] },
         "value": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
         "window": { "type": "string", "minLength": 1, "maxLength": 40 },
-        "source_reference": { "type": ["string", "null"], "maxLength": 500 }
+        "source_reference": { "type": ["string", "null"], "maxLength": 500 },
+        "observations": { "type": ["integer", "null"], "minimum": 0 },
+        "good_observations": { "type": ["integer", "null"], "minimum": 0 },
+        "bad_observations": { "type": ["integer", "null"], "minimum": 0 }
       },
       "allOf": [
         {
