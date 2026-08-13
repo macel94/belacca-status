@@ -5,10 +5,12 @@ platform.
 
 The scheduled GitHub Actions runner checks public portfolio, Pong, and
 analytics endpoints from outside the native cluster that hosts the platform. It
-checks the analytics `/status` endpoint and a fixed harmless `/count` collector
-probe; portfolio aliases are checked as redirect diagnostics. It commits a
-public `status.json` artifact and a bounded, sanitized observation record under
-`history/` every hour. It also publishes [`slo.json`](slo.json), a sanitized
+checks the catalogued analytics SLI (`/status` plus a fixed harmless same-origin
+`/count` collector probe), `/count.js` as a supporting diagnostic, and every
+supported portfolio alias over representative paths while preserving the path
+in the expected canonical `Location`. It commits a public `status.json`
+artifact and a bounded, sanitized observation record under `history/` every
+hour. It also publishes [`slo.json`](slo.json), a sanitized
 30-day SLO and error-budget artifact generated from that history. See
 [`POLICY.md`](POLICY.md) for the publication and failure-domain boundary.
 
@@ -18,9 +20,14 @@ slots keep SLO values unknown until the full 720-slot window is valid. A
 controlled-drill recovery objective under six minutes is separate policy context
 and is excluded from availability arithmetic.
 
-Authenticated dashboard and Flux checks are intentionally not configured: they
-would require an operator-managed identity and are not part of the public
-artifact until a dedicated safe probe exists.
+Authenticated dashboard and Flux checks are optional diagnostics. They use only
+short-lived, operator-managed bearer credentials supplied as GitHub Actions
+secrets (`DASHBOARD_PROBE_BEARER_TOKEN` and `FLUX_PROBE_BEARER_TOKEN`); values
+are never written to Git, passed to the Pong child process, or included in
+history. The probe makes no request when its credential is absent and records
+`configuration_unknown`. The current Dex/Google deployment does not provide a
+verified least-privilege synthetic identity, so operators must not populate
+these secrets until one is approved and the endpoint accepts this probe safely.
 
 The repository is intentionally not a Kubernetes status API or paging system.
 The website reads only the public `status.json` artifact from GitHub and falls
@@ -46,3 +53,24 @@ npm --prefix ../cloudnativepong ci --ignore-scripts
 node scripts/monitor.mjs \
   --pong-script ../cloudnativepong/scripts/synthetic-check.mjs
 ```
+
+## Optional operator probe configuration
+
+The workflow can receive these out-of-band secrets without changing public
+artifacts:
+
+- `DASHBOARD_PROBE_BEARER_TOKEN` for `https://dashboard.belacca.com/`
+- `FLUX_PROBE_BEARER_TOKEN` for `https://flux.belacca.com/`
+
+A supplied URL override must be HTTPS with no query, fragment, username, or
+password. A successful HTML response that is not an OAuth sign-in page is
+`passed`; a response mismatch is `target_failure`; a transport or monitor
+exception is `monitor_failure`; and absent/invalid configuration is
+`configuration_unknown`. Only target and monitor failures make the monitor
+command unsuccessful. This distinction prevents missing production-only
+identity setup from being mislabeled as a native target outage.
+
+Before enabling either secret, an operator must create and approve a dedicated
+least-privilege synthetic identity, document rotation/revocation, and verify
+that the identity provider supports this bearer probe safely. That production
+step cannot be performed or claimed from this repository.

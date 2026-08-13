@@ -12,15 +12,16 @@ native cluster that hosts the platform:
 - **Portfolio**: `https://francesco.belacca.com/health` and the homepage.
 - **Pong**: `https://pong.belacca.com/health`, homepage, and the complete
   create/join/two-WebSocket/playing/cleanup journey from the Pong repository.
-- **Analytics**: `https://stats.belacca.com/status`, the harmless `/count` collector probe, and `/count.js` script availability.
-- **Portfolio redirects**: `belacca.com`, `www.belacca.com`, and `www.francesco.belacca.com` are checked as non-SLO routing diagnostics; each must permanently redirect to `https://francesco.belacca.com` while preserving the requested path.
+- **Analytics**: `https://stats.belacca.com/status`, the harmless same-origin `/count` collector probe, and `/count.js` script availability.
+- **Portfolio redirects**: `belacca.com`, `www.belacca.com`, and `www.francesco.belacca.com` are checked over `/`, `/reliability.html`, `/status.html`, and `/privacy.html` as non-SLO routing diagnostics; each must return a permanent redirect to `https://francesco.belacca.com` with the requested path preserved.
+- **Operator journeys**: optional authenticated HTTPS probes for `https://dashboard.belacca.com/` and `https://flux.belacca.com/` using out-of-band bearer credentials. Missing credentials are explicitly `configuration_unknown` and make no request.
 
-Analytics `/status` and `/count` are the SLO-eligible checks. `/count.js` and
-portfolio alias redirects are supporting diagnostics and do not create separate
-services or SLO denominators. The dashboard, Flux UI, and Dex alias are not
-monitored because authenticated checks require an operator-managed identity;
-they remain explicitly unconfigured rather than using credentials in this
-repository. The complete supported-host inventory and canonicalization policy is maintained in the GitOps repository's
+Analytics `/status` and `/count` are the SLO-eligible checks. `/count.js`,
+portfolio alias redirects, and operator journeys are supporting diagnostics and
+do not create separate services or SLO denominators. The current identity
+provider does not provide a verified dedicated least-privilege synthetic
+identity, so the optional operator probes remain unconfigured until an
+operator completes the follow-up in `OPERATOR-PROBE-RUNBOOK.md`. The complete supported-host inventory and canonicalization policy is maintained in the GitOps repository's
 [`docs/SITES.md`](https://github.com/macel94/belacca-gitops/blob/main/docs/SITES.md).
 The dashboard and Flux UI require operator-managed identity and credentials.
 
@@ -41,6 +42,10 @@ The dashboard and Flux UI require operator-managed identity and credentials.
   addresses, tokens, cookies, internal hostnames, or raw exception messages. The
   collector probe uses only a fixed synthetic path/title and stores aggregate
   pass/fail results, never the generated request URL or response body.
+- History stores only bounded latency, outcome (`passed`, `target_failure`,
+  `monitor_failure`, or `configuration_unknown`), and failure class (`none`,
+  `target`, `monitor`, or `configuration`). Credentials are used in memory only
+  and are never passed to the Pong child process or written to logs/artifacts.
 
 The policy itself is human-approved. Individual observations are automated and
 are not represented as manually reviewed incidents.

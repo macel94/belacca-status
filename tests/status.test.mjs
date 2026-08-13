@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildArtifact, runMonitor } from '../scripts/monitor.mjs';
+import { ANALYTICS_SLI_CHECKS, PORTFOLIO_ALIAS_HOSTS, PORTFOLIO_ALIAS_PATHS, buildArtifact, buildCheckDefinitions, runMonitor } from '../scripts/monitor.mjs';
 import { validateStatus } from '../scripts/validate-status.mjs';
 
 const NOW = Date.parse('2026-08-06T12:00:00Z');
@@ -226,6 +226,123 @@ test('monitor checks analytics collector paths and portfolio redirects without f
   assert.ok(checkIDs.includes('analytics-count-js'));
   assert.ok(checkIDs.includes('portfolio-redirect-belacca-com'));
   assert.equal(result.artifact.components.find((item) => item.id === 'analytics').status, 'operational');
+  assert.equal(checkIDs.filter((id) => id.startsWith('portfolio-redirect-')).length, PORTFOLIO_ALIAS_HOSTS.length * PORTFOLIO_ALIAS_PATHS.length);
+  for (const host of PORTFOLIO_ALIAS_HOSTS) {
+    for (const path of PORTFOLIO_ALIAS_PATHS) {
+      assert.ok(checkIDs.some((id) => id.includes(host.replaceAll('.', '-')) && (path === '/reliability.html' ? id === `portfolio-redirect-${host.replaceAll('.', '-')}` : id.endsWith(path === '/' ? '-root' : `-${path.slice(1).replaceAll(/[^A-Za-z0-9]+/gu, '-')}`))));
+    }
+  }
+  assert.deepEqual(ANALYTICS_SLI_CHECKS, ['analytics-status', 'analytics-count']);
+});
+
+test('missing operator credentials are configuration unknown and make no network request', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'belacca-status-operator-unknown-'));
+  const requested = [];
+  const fetchImpl = async (url) => {
+    requested.push(url);
+    const parsed = new URL(url);
+    if (PORTFOLIO_ALIAS_HOSTS.includes(parsed.hostname)) return new Response('', { status: 308, headers: { location: `https://francesco.belacca.com${parsed.pathname}` } });
+    if (parsed.pathname === '/count') return new Response('GIF89a', { status: 200, headers: { 'content-type': 'image/gif' } });
+    if (parsed.pathname === '/count.js') return new Response('window.goatcounter = {};', { status: 200, headers: { 'content-type': 'text/javascript' } });
+    if (parsed.pathname === '/status') return new Response(JSON.stringify({ version: 'test', uptime: '1h' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    if (parsed.pathname === '/health') return new Response('ok', { status: 200 });
+    return new Response('<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">', { status: 200 });
+  };
+  const result = await runMonitor({
+    env: { ...env, STATUS_OBSERVATION_ID: 'operator-unknown', STATUS_CHECK_ATTEMPTS: '1', STATUS_RETRY_DELAY_MS: '0' },
+    fetchImpl,
+    runProcessImpl: async () => ({ passed: true }),
+    now: NOW,
+    pongScript: '/tmp/pong.mjs',
+    output: join(directory, 'status.json'),
+    historyDir: join(directory, 'history'),
+  });
+  const operatorChecks = result.historyRecord.checks.filter((check) => check.id.endsWith('-authenticated'));
+  assert.equal(operatorChecks.length, 2);
+  assert.ok(operatorChecks.every((check) => check.outcome === 'configuration_unknown' && check.failure_class === 'configuration' && check.duration_ms === 0));
+  assert.equal(requested.some((url) => url.includes('dashboard.belacca.com') || url.includes('flux.belacca.com')), false);
+  assert.equal(result.failed, false);
+  assert.equal(result.configuration_unknown, true);
+  assert.equal(result.artifact.components.find((item) => item.id === 'operator').status, 'unknown');
+});
+
+test('partial operator configuration remains unknown until every journey is configured', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'belacca-status-operator-partial-'));
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'dashboard.belacca.com') return new Response('<html>authenticated dashboard</html>', { status: 200, headers: { 'content-type': 'text/html' } });
+    if (PORTFOLIO_ALIAS_HOSTS.includes(parsed.hostname)) return new Response('', { status: 308, headers: { location: `https://francesco.belacca.com${parsed.pathname}` } });
+    if (parsed.pathname === '/count') return new Response('GIF89a', { status: 200, headers: { 'content-type': 'image/gif' } });
+    if (parsed.pathname === '/count.js') return new Response('window.goatcounter = {};', { status: 200, headers: { 'content-type': 'text/javascript' } });
+    if (parsed.pathname === '/status') return new Response(JSON.stringify({ version: 'test', uptime: '1h' }), { status: 200 });
+    if (parsed.pathname === '/health') return new Response('ok', { status: 200 });
+    return new Response('<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">', { status: 200 });
+  };
+  const result = await runMonitor({
+    env: { ...env, DASHBOARD_PROBE_BEARER_TOKEN: 'synthetic', STATUS_OBSERVATION_ID: 'operator-partial', STATUS_CHECK_ATTEMPTS: '1', STATUS_RETRY_DELAY_MS: '0' },
+    fetchImpl,
+    runProcessImpl: async () => ({ passed: true }),
+    now: NOW,
+    pongScript: '/tmp/pong.mjs',
+    output: join(directory, 'status.json'),
+    historyDir: join(directory, 'history'),
+  });
+  assert.equal(result.artifact.components.find((item) => item.id === 'operator').status, 'unknown');
+  assert.equal(result.failed, false);
+});
+
+test('configured operator probes classify target and monitor failures without publishing secrets', async () => {
+  const { mkdtemp, readFile: read } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'belacca-status-operator-configured-'));
+  const secret = 'synthetic-token-never-publish';
+  const seenHeaders = [];
+  const fetchImpl = async (url, options = {}) => {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'dashboard.belacca.com') {
+      seenHeaders.push(options.headers);
+      return new Response('<html>dashboard unavailable</html>', { status: 503, headers: { 'content-type': 'text/html' } });
+    }
+    if (parsed.hostname === 'flux.belacca.com') {
+      seenHeaders.push(options.headers);
+      throw new Error('synthetic transport detail must not leak');
+    }
+    if (PORTFOLIO_ALIAS_HOSTS.includes(parsed.hostname)) return new Response('', { status: 308, headers: { location: `https://francesco.belacca.com${parsed.pathname}` } });
+    if (parsed.pathname === '/count') return new Response('GIF89a', { status: 200, headers: { 'content-type': 'image/gif' } });
+    if (parsed.pathname === '/count.js') return new Response('window.goatcounter = {};', { status: 200, headers: { 'content-type': 'text/javascript' } });
+    if (parsed.pathname === '/status') return new Response(JSON.stringify({ version: 'test', uptime: '1h' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    if (parsed.pathname === '/health') return new Response('ok', { status: 200 });
+    return new Response('<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">', { status: 200 });
+  };
+  const result = await runMonitor({
+    env: { ...env, DASHBOARD_PROBE_BEARER_TOKEN: secret, FLUX_PROBE_BEARER_TOKEN: secret, STATUS_OBSERVATION_ID: 'operator-classification', STATUS_CHECK_ATTEMPTS: '1', STATUS_RETRY_DELAY_MS: '0' },
+    fetchImpl,
+    runProcessImpl: async () => ({ passed: true }),
+    now: NOW,
+    pongScript: '/tmp/pong.mjs',
+    output: join(directory, 'status.json'),
+    historyDir: join(directory, 'history'),
+  });
+  const operatorChecks = result.historyRecord.checks.filter((check) => check.id.endsWith('-authenticated'));
+  assert.deepEqual(operatorChecks.map((check) => [check.outcome, check.failure_class]), [['target_failure', 'target'], ['monitor_failure', 'monitor']]);
+  assert.ok(seenHeaders.every((headers) => headers.authorization === `Bearer ${secret}`));
+  const raw = `${await read(join(directory, 'status.json'), 'utf8')}\n${await read(result.historyPath, 'utf8')}`;
+  assert.doesNotMatch(raw, /synthetic-token-never-publish|transport detail|dashboard unavailable/i);
+  assert.equal(result.failed, true);
+});
+
+test('configured check definitions preserve only permanent alias redirects', () => {
+  const aliases = buildCheckDefinitions(env).filter((check) => check.id.startsWith('portfolio-redirect-'));
+  assert.equal(aliases.length, PORTFOLIO_ALIAS_HOSTS.length * PORTFOLIO_ALIAS_PATHS.length);
+  const response = new Response('', { status: 302, headers: { location: 'https://francesco.belacca.com/' } });
+  assert.equal(aliases[0].acceptResponse(response), false);
 });
 
 test('runMonitor writes only sanitized status and history records', async () => {

@@ -63,7 +63,7 @@
       "error_budget": null,
       "latest_evidence_timestamp": "2026-08-13T05:02:53.394Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31668953065",
+        "https://github.com/macel94/belacca-status/actions",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio"
       ]
     },
@@ -96,7 +96,7 @@
       "error_budget": null,
       "latest_evidence_timestamp": "2026-08-13T05:02:53.394Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31668953065",
+        "https://github.com/macel94/belacca-status/actions",
         "https://github.com/macel94/belacca-status/tree/main/history#pong"
       ]
     },
@@ -109,7 +109,7 @@
       "target_percent": "99%",
       "window": "30d",
       "cadence": "1h",
-      "indicator": "Successful external analytics status and harmless collector observation",
+      "indicator": "Successful external HTTPS GET /status and same-origin /count requests",
       "evaluation_window": {
         "start": "2026-07-14T06:00:00.000Z",
         "end": "2026-08-13T05:00:00.000Z",
@@ -129,13 +129,13 @@
       "error_budget": null,
       "latest_evidence_timestamp": "2026-08-13T05:02:53.394Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/31668953065",
+        "https://github.com/macel94/belacca-status/actions",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics"
       ]
     }
   ],
   "source_references": [
-    "https://github.com/macel94/belacca-status/actions/runs/31668953065",
+    "https://github.com/macel94/belacca-status/actions",
     "https://github.com/macel94/belacca-status/tree/main/history#platform"
   ],
   "notes": [

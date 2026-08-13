@@ -149,6 +149,17 @@ test('malformed records without a location prevent numeric claims', () => {
   assert.throws(() => parseHistoryRecord({ schema_version: 'belacca.observation.v1', observed_at: new Date(END).toISOString(), components: [{ id: 'portfolio', raw_pass: true }, { id: 'portfolio', raw_pass: false }] }), /duplicate/);
 });
 
+test('history check latency and failure classes are validated and preserved', () => {
+  const record = historyRecord(END);
+  record.checks[0] = { id: 'analytics-status', passed: false, duration_ms: 321, outcome: 'target_failure', failure_class: 'target' };
+  const parsed = parseHistoryRecord(record);
+  assert.deepEqual(parsed.checks[0], record.checks[0]);
+  assert.throws(() => parseHistoryRecord({ ...record, checks: [{ ...record.checks[0], duration_ms: 120001 }] }), /duration_ms/);
+  assert.throws(() => parseHistoryRecord({ ...record, checks: [{ ...record.checks[0], outcome: 'secret-leaked' }] }), /outcome/);
+  assert.throws(() => parseHistoryRecord({ ...record, checks: [{ ...record.checks[0], failure_class: 'raw-error' }] }), /failure_class/);
+  assert.throws(() => parseHistoryRecord({ ...record, checks: [{ ...record.checks[0], passed: true }] }), /inconsistent/);
+});
+
 test('complete windows report the 99 percent objective and error budget', () => {
   const records = completeHistory();
   records[records.length - 1].components.find((component) => component.id === 'pong').raw_pass = false;
