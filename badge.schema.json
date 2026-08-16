@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/macel94/belacca-status/main/badge.schema.json",
+  "title": "Belacca reusable public-status badge endpoint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "label", "message", "color", "labelColor", "cacheSeconds", "status", "observedAt", "validUntil", "sourceReference"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "label": { "const": "public status" },
+    "message": { "enum": ["operational", "degraded", "incident", "unknown"] },
+    "color": { "enum": ["brightgreen", "orange", "red", "lightgrey"] },
+    "labelColor": { "const": "#555" },
+    "cacheSeconds": { "const": 300 },
+    "status": { "enum": ["operational", "degraded", "incident", "unknown"] },
+    "observedAt": { "type": ["string", "null"], "format": "date-time" },
+    "validUntil": { "type": ["string", "null"], "format": "date-time" },
+    "sourceReference": { "type": "string", "format": "uri", "maxLength": 500 }
+  }
+}

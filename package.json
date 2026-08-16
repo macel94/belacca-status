@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node scripts/validate-status.mjs status.json --allow-expired && node scripts/validate-slo.mjs slo.json"
+    "check": "node scripts/validate-status.mjs status.json --allow-expired && node scripts/validate-slo.mjs slo.json && node scripts/validate-badge.mjs badge.json"
   },
   "dependencies": {
     "ajv": "8.20.0",

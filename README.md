@@ -1,7 +1,11 @@
 # Belacca status
 
+[![Public status](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmacel94%2Fbelacca-status%2Fmain%2Fbadge.json&cacheSeconds=300)](https://francesco.belacca.com/status.html)
+
 Hourly, externally observed and sanitized status history for the Belacca
-platform.
+platform. The generated [`badge.json`](badge.json) is a reusable Shields
+endpoint artifact derived from the fresh published status; it becomes grey
+`unknown` when generated from an expired or bootstrap artifact.
 
 The scheduled GitHub Actions runner checks public portfolio, Pong, and
 analytics endpoints from outside the native cluster that hosts the platform. It
@@ -11,8 +15,9 @@ supported portfolio alias over representative paths while preserving the path
 in the expected canonical `Location`. It commits a public `status.json`
 artifact and a bounded, sanitized observation record under `history/` every
 hour. It also publishes [`slo.json`](slo.json), a sanitized
-30-day SLO and error-budget artifact generated from that history. See
-[`POLICY.md`](POLICY.md) for the publication and failure-domain boundary.
+30-day SLO and error-budget artifact generated from that history, plus the
+badge artifact. See [`POLICY.md`](POLICY.md) for the publication and
+failure-domain boundary.
 
 Each supported public application has an internal 99% availability objective;
 this is not an SLA and carries no service credit. `slo.json` reports the current
@@ -33,9 +38,10 @@ verified least-privilege synthetic identity, so operators must not populate
 these secrets until one is approved and the endpoint accepts this probe safely.
 
 The repository is intentionally not a Kubernetes status API or paging system.
-The website reads only the public `status.json` artifact from GitHub and falls
-back to a freshness-safe unknown state if the artifact is missing, malformed, or
-expired. Published uptime is calculated from good and bad critical observations
+The website reads the public `status.json` artifact from GitHub and then tries
+its checked-in local copy if the external fetch is unavailable. Both paths are
+validated; missing, malformed, or expired published evidence becomes a
+freshness-safe unknown state. Published uptime is calculated from good and bad critical observations
 in the recent 24-hour window; short history is labeled `available history / 24h`
 with its observation count. `slo.json` is durable reliability evidence, not a
 public uptime claim; its current measured levels are published immediately from
@@ -50,7 +56,9 @@ local workspace review.
 npm test
 npm run check
 node scripts/slo-evidence.mjs --history-dir history --output slo.json
+node scripts/badge.mjs --input status.json --output badge.json
 node scripts/validate-slo.mjs slo.json
+node scripts/validate-badge.mjs badge.json
 ```
 
 The full Pong journey requires the sibling repository and its npm dependency:
@@ -73,9 +81,12 @@ A supplied URL override must be HTTPS with no query, fragment, username, or
 password. A successful HTML response that is not an OAuth sign-in page is
 `passed`; a response mismatch is `target_failure`; a transport or monitor
 exception is `monitor_failure`; and absent/invalid configuration is
-`configuration_unknown`. Only target and monitor failures make the monitor
-command unsuccessful. This distinction prevents missing production-only
-identity setup from being mislabeled as a native target outage.
+`configuration_unknown`. Target and monitor failures make the monitor command
+unsuccessful after the sanitized status, SLO, history, and badge artifacts have
+been validated and pushed. This keeps the GitHub workflow badge red during a
+confirmed target incident while still preserving the evidence needed by the
+status page. Missing production-only identity setup remains explicitly
+`configuration_unknown` and does not become a native target outage.
 
 Before enabling either secret, an operator must create and approve a dedicated
 least-privilege synthetic identity, document rotation/revocation, and verify

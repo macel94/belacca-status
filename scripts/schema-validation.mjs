@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 const schemas = {
   status: JSON.parse(readFileSync(new URL('../status.schema.json', import.meta.url), 'utf8')),
   slo: JSON.parse(readFileSync(new URL('../slo.schema.json', import.meta.url), 'utf8')),
+  badge: JSON.parse(readFileSync(new URL('../badge.schema.json', import.meta.url), 'utf8')),
 };
 
 const ajv = new Ajv2020({ allErrors: true, strict: true });

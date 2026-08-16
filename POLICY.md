@@ -34,7 +34,9 @@ The dashboard and Flux UI require operator-managed identity and credentials.
 - `incident` means a critical component failed.
 - `unknown` means there is no valid, fresh observation; the page explains this as awaiting fresh evidence rather than showing an absent configuration.
 - A failed check is still committed as a status artifact before the workflow
-  exits unsuccessfully.
+  exits unsuccessfully. Target and monitor failures make the workflow red after
+  the sanitized artifacts have been validated and pushed, so the native GitHub
+  workflow badge does not imply operational service health.
 - The artifact expires two hours after observation. The website must treat an
   expired or malformed artifact as `unknown`.
 - Published uptime is reported from valid good/bad critical observations in the recent 24-hour window. When the history is shorter than a complete 24-hour horizon, the artifact reports `available history / 24h` and the observed count; it does not manufacture a full-window claim.
@@ -48,7 +50,12 @@ The dashboard and Flux UI require operator-managed identity and credentials.
   and are never passed to the Pong child process or written to logs/artifacts.
 
 The policy itself is human-approved. Individual observations are automated and
-are not represented as manually reviewed incidents.
+are not represented as manually reviewed incidents. The reusable [`badge.json`](badge.json)
+artifact mirrors only fresh published status: it is green, orange, or red for
+fresh operational, degraded, or incident evidence and becomes grey `unknown`
+when the source is expired or not configured. It is suitable for a Shields
+endpoint badge; the workflow badge separately describes whether publication
+succeeded.
 
 ## Internal availability objective
 

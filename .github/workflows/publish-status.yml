@@ -74,7 +74,7 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-      - name: Generate and commit status observation
+      - name: Generate, validate, and commit status observation
         id: publish
         shell: bash
         env:
@@ -87,6 +87,8 @@ jobs:
           status_validation_status=0
           slo_generation_status=0
           slo_validation_status=0
+          badge_generation_status=0
+          badge_validation_status=0
           publish_status=0
 
           export PONG_COMMIT="$(git -C "$PONG_CHECKOUT_PATH" rev-parse HEAD)"
@@ -126,14 +128,29 @@ jobs:
             slo_validation_status=1
           fi
 
-          if (( status_generation_status != 0 || status_validation_status != 0 || slo_generation_status != 0 || slo_validation_status != 0 )); then
+          if node scripts/badge.mjs --input status.json --output badge.json; then
+            :
+          else
+            badge_generation_status=$?
+          fi
+          if [[ "$badge_generation_status" -eq 0 ]]; then
+            if node scripts/validate-badge.mjs badge.json; then
+              :
+            else
+              badge_validation_status=$?
+            fi
+          else
+            badge_validation_status=1
+          fi
+
+          if (( status_generation_status != 0 || status_validation_status != 0 || slo_generation_status != 0 || slo_validation_status != 0 || badge_generation_status != 0 || badge_validation_status != 0 )); then
             echo 'Refusing to stage or commit invalid generated artifacts.' >&2
             exit 1
           fi
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add status.json history slo.json
+          git add status.json history slo.json badge.json
           if git diff --cached --quiet; then
             echo 'No status changes to commit.'
           elif git commit -m "status: publish observation ${STATUS_OBSERVATION_ID}"; then
@@ -173,10 +190,18 @@ jobs:
           if [[ "$slo_validation_status" -ne 0 ]]; then
             echo "Generated SLO validation failed with exit code $slo_validation_status." >&2
           fi
+          if [[ "$badge_generation_status" -ne 0 ]]; then
+            echo "Badge generation failed with exit code $badge_generation_status." >&2
+          fi
+          if [[ "$badge_validation_status" -ne 0 ]]; then
+            echo "Generated badge validation failed with exit code $badge_validation_status." >&2
+          fi
           if [[ "$publish_status" -ne 0 ]]; then
             echo "Status publication failed with exit code $publish_status." >&2
           fi
-          # Exit code 1 means the external checks failed and was already published
-          # as a valid degraded/incident observation. Only monitor errors (2+) fail
-          # the workflow after the generated artifacts have been validated.
-          (( (monitor_status == 0 || monitor_status == 1) && status_generation_status == 0 && status_validation_status == 0 && slo_generation_status == 0 && slo_validation_status == 0 && publish_status == 0 ))
+          # Valid target or transport check failures are published evidence, but
+          # the workflow must remain red so its native GitHub badge reflects the
+          # incident. The generated status, SLO, and badge artifacts have already
+          # been validated and pushed before this final result is returned.
+          # Generator/validation failures fail closed before publication.
+          (( monitor_status == 0 && status_generation_status == 0 && status_validation_status == 0 && slo_generation_status == 0 && slo_validation_status == 0 && badge_generation_status == 0 && badge_validation_status == 0 && publish_status == 0 ))
