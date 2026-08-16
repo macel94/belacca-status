@@ -1,6 +1,6 @@
 # Belacca status
 
-[![Public status](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmacel94%2Fbelacca-status%2Fmain%2Fbadge.json&cacheSeconds=300)](https://francesco.belacca.com/status.html)
+[![Public status](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmacel94%2Fbelacca-status%2Fmain%2Fbadge.json)](https://francesco.belacca.com/status.html)
 
 Hourly, externally observed and sanitized status history for the Belacca
 platform. The generated [`badge.json`](badge.json) is a reusable Shields
