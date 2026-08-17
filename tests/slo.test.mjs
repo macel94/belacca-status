@@ -116,6 +116,58 @@ test('newer malformed evidence advances the rolling window while retaining measu
   }
 });
 
+test('pure monitor failures remain unknown instead of consuming the target budget', () => {
+  const records = completeHistory();
+  const latest = records.at(-1);
+  latest.components.find((component) => component.id === 'pong').raw_pass = false;
+  const journey = latest.checks.find((check) => check.id === 'pong-journey');
+  journey.passed = false;
+  journey.outcome = 'monitor_failure';
+  journey.failure_class = 'monitor';
+  const artifact = buildSloArtifact({ records, now: END, env });
+  const pong = artifact.services.find((service) => service.id === 'pong');
+  assert.equal(pong.counts.good_slots, WINDOW_HOURS - 1);
+  assert.equal(pong.counts.bad_slots, 0);
+  assert.equal(pong.counts.unknown_slots, 1);
+  assert.equal(pong.sli_percent, 100);
+  validateSlo(artifact);
+});
+
+test('legacy failures without an outcome remain unknown', () => {
+  const records = completeHistory();
+  const latest = records.at(-1);
+  latest.components.find((component) => component.id === 'pong').raw_pass = false;
+  latest.checks.find((check) => check.id === 'pong-journey').passed = false;
+  const artifact = buildSloArtifact({ records, now: END, env });
+  const pong = artifact.services.find((service) => service.id === 'pong');
+  assert.equal(pong.counts.good_slots, WINDOW_HOURS - 1);
+  assert.equal(pong.counts.bad_slots, 0);
+  assert.equal(pong.counts.unknown_slots, 1);
+  assert.equal(pong.sli_percent, 100);
+  validateSlo(artifact);
+});
+
+test('an independent target failure remains bad beside a monitor failure', () => {
+  const records = completeHistory();
+  const latest = records.at(-1);
+  latest.components.find((component) => component.id === 'pong').raw_pass = false;
+  const health = latest.checks.find((check) => check.id === 'pong-health');
+  health.passed = false;
+  health.outcome = 'target_failure';
+  health.failure_class = 'target';
+  const journey = latest.checks.find((check) => check.id === 'pong-journey');
+  journey.passed = false;
+  journey.outcome = 'monitor_failure';
+  journey.failure_class = 'monitor';
+  const artifact = buildSloArtifact({ records, now: END, env });
+  const pong = artifact.services.find((service) => service.id === 'pong');
+  assert.equal(pong.counts.good_slots, WINDOW_HOURS - 1);
+  assert.equal(pong.counts.bad_slots, 1);
+  assert.equal(pong.counts.unknown_slots, 0);
+  assert.equal(pong.sli_percent, 99.861111);
+  validateSlo(artifact);
+});
+
 test('raw component failures remain bad even when all configured checks are healthy', () => {
   const records = completeHistory();
   records.at(-1).components.find((component) => component.id === 'portfolio').raw_pass = false;
@@ -183,7 +235,10 @@ test('history check latency and failure classes are validated and preserved', ()
 test('complete windows report the 99 percent objective and error budget', () => {
   const records = completeHistory();
   records[records.length - 1].components.find((component) => component.id === 'pong').raw_pass = false;
-  records[records.length - 1].checks.find((check) => check.id === 'pong-journey').passed = false;
+  const failedJourney = records[records.length - 1].checks.find((check) => check.id === 'pong-journey');
+  failedJourney.passed = false;
+  failedJourney.outcome = 'target_failure';
+  failedJourney.failure_class = 'target';
   const artifact = buildSloArtifact({ records, now: END, env });
   const portfolio = artifact.services.find((service) => service.id === 'portfolio');
   const pong = artifact.services.find((service) => service.id === 'pong');

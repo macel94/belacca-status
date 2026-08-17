@@ -137,6 +137,43 @@ test('validation rejects expired artifacts and accepts a fresh generated artifac
   assert.throws(() => validateStatus(artifact, { now: NOW + 3 * 3600000 }), /expired/);
 });
 
+test('Pong synthetic journey receives a cold-start-compatible timeout budget', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'belacca-status-pong-timeout-'));
+  const requested = [];
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    if (['belacca.com', 'www.belacca.com', 'www.francesco.belacca.com'].includes(parsed.hostname)) {
+      return new Response('', { status: 308, headers: { location: `https://francesco.belacca.com${parsed.pathname}` } });
+    }
+    if (url.includes('/count?')) return new Response('GIF89a', { status: 200, headers: { 'content-type': 'image/gif' } });
+    if (url.endsWith('/count.js')) return new Response('window.goatcounter = {};', { status: 200, headers: { 'content-type': 'text/javascript' } });
+    const body = url.endsWith('/health') ? 'ok\n' : url.includes('stats') ? JSON.stringify({ version: 'test', uptime: '1h' }) : '<title>Cloud Native Pong</title><input id="playerName">Systems, under load.<div id="hero-title">';
+    return new Response(body, { status: 200 });
+  };
+  const result = await runMonitor({
+    env: { ...env, STATUS_OBSERVATION_ID: 'pong-timeout-budget', STATUS_CHECK_ATTEMPTS: '1', STATUS_RETRY_DELAY_MS: '0' },
+    fetchImpl,
+    runProcessImpl: async (_command, _args, options) => {
+      requested.push(options);
+      return { passed: true };
+    },
+    now: NOW,
+    pongScript: '/tmp/pong.mjs',
+    output: join(directory, 'status.json'),
+    historyDir: join(directory, 'history'),
+  });
+
+  assert.equal(result.failed, false);
+  assert.equal(requested.length, 1);
+  assert.equal(requested[0].timeoutMs, 100_000);
+  assert.equal(requested[0].env.SYNTHETIC_TIMEOUT_MS, '90000');
+  assert.equal(requested[0].env.SYNTHETIC_REQUEST_TIMEOUT_MS, '30000');
+  assert.equal(result.artifact.status, 'operational');
+});
+
 test('transient external failures are retried before publishing', async () => {
   const { mkdtemp } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');

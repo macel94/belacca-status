@@ -52,6 +52,11 @@ const MAX_CHECK_ATTEMPTS = 5;
 const DEFAULT_RETRY_DELAY_MS = 1_000;
 const MAX_RETRY_DELAY_MS = 30_000;
 const PONG_TIMEOUT_MS = 100_000;
+// Room creation waits up to 15 seconds for Kubernetes EndpointSlice readiness.
+// Keep the child-process budgets above that bound so the monitor does not abort
+// a valid cold-start request before the API can return its room contract.
+const PONG_SYNTHETIC_TIMEOUT_MS = 90_000;
+const PONG_SYNTHETIC_REQUEST_TIMEOUT_MS = 30_000;
 const UPTIME_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export class MonitorError extends Error {
@@ -231,7 +236,12 @@ async function runPongJourney({ script, baseURL, env, observedAt, runProcessImpl
   for (attempt = 1; attempt <= attempts; attempt += 1) {
     const { DASHBOARD_PROBE_BEARER_TOKEN, FLUX_PROBE_BEARER_TOKEN, ...syntheticEnv } = env;
     result = await runProcessImpl(process.execPath, [resolve(script)], {
-      env: { ...syntheticEnv, SYNTHETIC_BASE_URL: baseURL, SYNTHETIC_TIMEOUT_MS: '20000', SYNTHETIC_REQUEST_TIMEOUT_MS: '8000' },
+      env: {
+        ...syntheticEnv,
+        SYNTHETIC_BASE_URL: baseURL,
+        SYNTHETIC_TIMEOUT_MS: String(PONG_SYNTHETIC_TIMEOUT_MS),
+        SYNTHETIC_REQUEST_TIMEOUT_MS: String(PONG_SYNTHETIC_REQUEST_TIMEOUT_MS),
+      },
       timeoutMs: PONG_TIMEOUT_MS,
     });
     if (result.passed === true || attempt === attempts) break;

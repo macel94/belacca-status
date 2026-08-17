@@ -72,8 +72,10 @@ observed slots + bad observed slots)`. Before the evidence spans 30 days, the
 denominator is the observations already available; once it spans 30 days, the
 calculation uses the latest 720 hourly slots. A missing hourly slot, a missing
 component, or a malformed history record is unknown, remains in the coverage
-counts, and never counts as success. The source history contract remains
-`belacca.observation.v1`.
+counts, and never counts as success or a target outage. An unclassified
+failure, monitor failure, or configuration-only unknown is not a target outage;
+an independent target failure in the same observation remains a bad slot. The source history
+contract remains `belacca.observation.v1`.
 
 A controlled-drill recovery objective under six minutes is a separate
 operational exercise. It is represented as policy context only and is excluded

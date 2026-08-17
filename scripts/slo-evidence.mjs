@@ -39,7 +39,7 @@ export const SLO_POLICY = {
   window: '30d',
   window_hours: WINDOW_HOURS,
   cadence: '1h',
-  unknown_policy: 'Missing or malformed observation slots are unknown, remain in coverage counts, and never count as success.',
+  unknown_policy: 'Missing, malformed, unclassified-failure, monitor-failure, and configuration-unknown slots are unknown, remain in coverage counts, and never count as success or bad target observations.',
   sla: false,
   service_credits: false,
   recovery_objective: {
@@ -180,11 +180,19 @@ function latestEvidenceTimestamp(records, invalidTimestamps, fallback) {
 function serviceValue(record, service) {
   const component = record.components.find((item) => item.id === service.component);
   if (!component) return null;
-  const checks = new Map(record.checks.map((check) => [check.id, check.passed]));
+  const checks = new Map(record.checks.map((check) => [check.id, check]));
   if (service.checks.some((checkID) => !checks.has(checkID))) return null;
+  const targetFailure = service.checks.some((checkID) => checks.get(checkID).outcome === 'target_failure');
+  const measurementFailure = service.checks.some((checkID) => ['monitor_failure', 'configuration_unknown'].includes(checks.get(checkID).outcome));
+  const unclassifiedFailure = service.checks.some((checkID) => checks.get(checkID).passed === false && !checks.get(checkID).outcome);
+  // A pure monitor/configuration/unclassified failure says the observation
+  // could not measure the target. It is unknown, not a target outage, and must
+  // not consume budget. If an independent target failure is present in the
+  // same observation, keep that slot bad rather than hiding it.
+  if ((measurementFailure || unclassifiedFailure) && !targetFailure) return null;
   // raw_pass is the monitor's aggregate result and must remain authoritative:
   // hysteresis changes the displayed status, never the recorded probe outcome.
-  return component.raw_pass === true && service.checks.every((checkID) => checks.get(checkID) === true);
+  return component.raw_pass === true && service.checks.every((checkID) => checks.get(checkID).passed === true);
 }
 
 function calculateService(service, records, invalidRecords, invalidTimestamps, evaluationEnd, env) {
@@ -314,7 +322,7 @@ export function buildSloArtifact({ records = [], invalidRecords = 0, invalidTime
       'This is sanitized SLO evidence for an internal 99% objective, not an SLA or service-credit commitment.',
       'The SLI is a sampled hourly external-observation proxy for availability; missing slots never count as success.',
       'SLO evidence is separate from public status, incident hysteresis, paging, and operator notification.',
-      'The current measured level uses good observed slots divided by good plus bad observed slots; missing slots are shown as coverage context and never count as success.',
+      'The current measured level uses good observed slots divided by good plus bad observed slots; missing, malformed, unclassified-failure, monitor-failure, and configuration-unknown slots are shown as coverage context and never count as success or bad target observations.',
       'Before the evidence spans 30 days, the measurement window is available history; thereafter it is the latest rolling 30-day horizon.'
     ],
   };
