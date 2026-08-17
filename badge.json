@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "label": "public status",
-  "message": "degraded",
-  "color": "orange",
+  "message": "operational",
+  "color": "brightgreen",
   "labelColor": "#555",
   "cacheSeconds": 300,
-  "status": "degraded",
-  "observedAt": "2026-08-17T13:51:59.848Z",
-  "validUntil": "2026-08-17T15:51:59.848Z",
-  "sourceReference": "https://github.com/macel94/belacca-status/actions/runs/32036952099"
+  "status": "operational",
+  "observedAt": "2026-08-17T14:43:11.366Z",
+  "validUntil": "2026-08-17T16:43:11.366Z",
+  "sourceReference": "https://github.com/macel94/belacca-status/actions/runs/32039995716"
 }
