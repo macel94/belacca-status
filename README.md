@@ -1,5 +1,8 @@
 # Belacca status
 
+The canonical cross-repository GitOps delivery and commit-routing guide is
+[`belacca-platform/docs/gitops-delivery.md`](https://github.com/macel94/belacca-platform/blob/main/docs/gitops-delivery.md).
+
 [![Public status](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmacel94%2Fbelacca-status%2Fmain%2Fbadge.json)](https://francesco.belacca.com/status.html)
 
 Hourly, externally observed and sanitized status history for the Belacca
@@ -49,6 +52,21 @@ observed evidence, while coverage and measurement window are shown alongside
 them.
 The first reviewed commit is also used as the platform submodule pointer for
 local workspace review.
+
+## GitOps and generated publication commits
+
+This repository is not a Flux deployment source. Source and policy changes are
+committed and pushed to `main`, then `.github/workflows/publish-status.yml`
+validates and publishes the generated `status.json`, `history/`, `slo.json`, and
+`badge.json` artifacts in a follow-up commit. Fetch that generated commit before
+claiming the public evidence is current. These artifacts describe external
+observations; they do not deploy Kubernetes workloads or prove a rollout.
+
+When this repository is checked out as part of `belacca-platform`, update the
+parent submodule pointer only after the generated publication commit is on
+`origin/main` and only when the workspace is intentionally being synchronized.
+The complete cross-repository commit/push and Flux verification model is in the
+workspace [`belacca-platform/docs/gitops-delivery.md`](https://github.com/macel94/belacca-platform/blob/main/docs/gitops-delivery.md).
 
 ## Local checks
 
