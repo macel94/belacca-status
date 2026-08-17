@@ -1,0 +1,186 @@
+{
+  "schema_version": "belacca.observation.v1",
+  "observation_id": "31992997281",
+  "observed_at": "2026-08-17T04:01:10.375Z",
+  "status": "incident",
+  "critical_pass": false,
+  "checks": [
+    {
+      "id": "portfolio-redirect-belacca-com-root",
+      "passed": true,
+      "duration_ms": 588,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-belacca-com",
+      "passed": true,
+      "duration_ms": 147,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-belacca-com-status-html",
+      "passed": true,
+      "duration_ms": 250,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-belacca-com-privacy-html",
+      "passed": true,
+      "duration_ms": 143,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-www-belacca-com-root",
+      "passed": true,
+      "duration_ms": 577,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-www-belacca-com",
+      "passed": true,
+      "duration_ms": 203,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-www-belacca-com-status-html",
+      "passed": true,
+      "duration_ms": 160,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-www-belacca-com-privacy-html",
+      "passed": true,
+      "duration_ms": 192,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-www-francesco-belacca-com-root",
+      "passed": true,
+      "duration_ms": 775,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-www-francesco-belacca-com",
+      "passed": true,
+      "duration_ms": 368,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-www-francesco-belacca-com-status-html",
+      "passed": true,
+      "duration_ms": 503,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-redirect-www-francesco-belacca-com-privacy-html",
+      "passed": true,
+      "duration_ms": 159,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-health",
+      "passed": true,
+      "duration_ms": 903,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "portfolio-homepage",
+      "passed": true,
+      "duration_ms": 148,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "pong-health",
+      "passed": true,
+      "duration_ms": 1183,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "pong-homepage",
+      "passed": true,
+      "duration_ms": 751,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "pong-journey",
+      "passed": false,
+      "duration_ms": 69045,
+      "outcome": "monitor_failure",
+      "failure_class": "monitor"
+    },
+    {
+      "id": "analytics-status",
+      "passed": true,
+      "duration_ms": 1152,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "analytics-count",
+      "passed": true,
+      "duration_ms": 171,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "analytics-count-js",
+      "passed": true,
+      "duration_ms": 277,
+      "outcome": "passed",
+      "failure_class": "none"
+    },
+    {
+      "id": "dashboard-authenticated",
+      "passed": false,
+      "duration_ms": 0,
+      "outcome": "configuration_unknown",
+      "failure_class": "configuration"
+    },
+    {
+      "id": "flux-authenticated",
+      "passed": false,
+      "duration_ms": 0,
+      "outcome": "configuration_unknown",
+      "failure_class": "configuration"
+    }
+  ],
+  "components": [
+    {
+      "id": "portfolio",
+      "status": "operational",
+      "raw_pass": true
+    },
+    {
+      "id": "pong",
+      "status": "incident",
+      "raw_pass": false,
+      "incident_started_at": "2026-08-17T04:01:10.375Z"
+    },
+    {
+      "id": "analytics",
+      "status": "operational",
+      "raw_pass": true
+    },
+    {
+      "id": "operator",
+      "status": "unknown",
+      "raw_pass": false
+    }
+  ]
+}
