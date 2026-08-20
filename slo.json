@@ -30,7 +30,7 @@
     "expected_slots": 720,
     "cadence": "1h",
     "source_history_schema": "belacca.observation.v1",
-    "valid_records": 268,
+    "valid_records": 269,
     "invalid_records": 0
   },
   "services": [
@@ -56,7 +56,7 @@
         "good_slots": 239,
         "bad_slots": 0,
         "unknown_slots": 481,
-        "duplicate_slots": 29,
+        "duplicate_slots": 30,
         "invalid_records": 0
       },
       "coverage_percent": 33.194444,
@@ -68,9 +68,9 @@
         "remaining_bad_slots": 2.39,
         "remaining_percent": 100
       },
-      "latest_evidence_timestamp": "2026-08-20T03:09:34.623Z",
+      "latest_evidence_timestamp": "2026-08-20T03:57:42.711Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/32327212940",
+        "https://github.com/macel94/belacca-status/actions/runs/32330091213",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio"
       ]
     },
@@ -96,7 +96,7 @@
         "good_slots": 163,
         "bad_slots": 1,
         "unknown_slots": 556,
-        "duplicate_slots": 29,
+        "duplicate_slots": 30,
         "invalid_records": 0
       },
       "coverage_percent": 22.777778,
@@ -108,9 +108,9 @@
         "remaining_bad_slots": 0.64,
         "remaining_percent": 39.02439
       },
-      "latest_evidence_timestamp": "2026-08-20T03:09:34.623Z",
+      "latest_evidence_timestamp": "2026-08-20T03:57:42.711Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/32327212940",
+        "https://github.com/macel94/belacca-status/actions/runs/32330091213",
         "https://github.com/macel94/belacca-status/tree/main/history#pong"
       ]
     },
@@ -136,7 +136,7 @@
         "good_slots": 201,
         "bad_slots": 1,
         "unknown_slots": 518,
-        "duplicate_slots": 29,
+        "duplicate_slots": 30,
         "invalid_records": 0
       },
       "coverage_percent": 28.055556,
@@ -148,15 +148,15 @@
         "remaining_bad_slots": 1.02,
         "remaining_percent": 50.49505
       },
-      "latest_evidence_timestamp": "2026-08-20T03:09:34.623Z",
+      "latest_evidence_timestamp": "2026-08-20T03:57:42.711Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/32327212940",
+        "https://github.com/macel94/belacca-status/actions/runs/32330091213",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics"
       ]
     }
   ],
   "source_references": [
-    "https://github.com/macel94/belacca-status/actions/runs/32327212940",
+    "https://github.com/macel94/belacca-status/actions/runs/32330091213",
     "https://github.com/macel94/belacca-status/tree/main/history#platform"
   ],
   "notes": [
