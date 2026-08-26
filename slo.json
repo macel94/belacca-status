@@ -3,7 +3,7 @@
   "schema_version": "belacca.slo-evidence.v1",
   "sanitized": true,
   "publication_state": "published",
-  "generated_at": "2026-08-26T16:00:00.000Z",
+  "generated_at": "2026-08-26T19:00:00.000Z",
   "policy": {
     "id": "belacca-slo-99-v1",
     "approved_by": "Francesco Belacca",
@@ -25,12 +25,12 @@
     "description": "Initial internal availability objective for each supported public application; no SLA or service credit is attached."
   },
   "evaluation": {
-    "window_start": "2026-07-27T17:00:00.000Z",
-    "window_end": "2026-08-26T16:00:00.000Z",
+    "window_start": "2026-07-27T20:00:00.000Z",
+    "window_end": "2026-08-26T19:00:00.000Z",
     "expected_slots": 720,
     "cadence": "1h",
     "source_history_schema": "belacca.observation.v1",
-    "valid_records": 417,
+    "valid_records": 418,
     "invalid_records": 0
   },
   "services": [
@@ -46,31 +46,31 @@
       "cadence": "1h",
       "indicator": "Successful external portfolio health and homepage observation",
       "evaluation_window": {
-        "start": "2026-07-27T17:00:00.000Z",
-        "end": "2026-08-26T16:00:00.000Z",
+        "start": "2026-07-27T20:00:00.000Z",
+        "end": "2026-08-26T19:00:00.000Z",
         "expected_slots": 720
       },
       "counts": {
         "expected_slots": 720,
-        "observed_slots": 370,
-        "good_slots": 370,
+        "observed_slots": 371,
+        "good_slots": 371,
         "bad_slots": 0,
-        "unknown_slots": 350,
+        "unknown_slots": 349,
         "duplicate_slots": 47,
         "invalid_records": 0
       },
-      "coverage_percent": 51.388889,
+      "coverage_percent": 51.527778,
       "sli_percent": 100,
       "error_budget": {
-        "allowed_bad_slots": 3.7,
+        "allowed_bad_slots": 3.71,
         "consumed_bad_slots": 0,
         "consumed_percent": 0,
-        "remaining_bad_slots": 3.7,
+        "remaining_bad_slots": 3.71,
         "remaining_percent": 100
       },
-      "latest_evidence_timestamp": "2026-08-26T16:58:24.391Z",
+      "latest_evidence_timestamp": "2026-08-26T19:19:09.576Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/32991463633",
+        "https://github.com/macel94/belacca-status/actions/runs/33004490585",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio"
       ]
     },
@@ -86,31 +86,31 @@
       "cadence": "1h",
       "indicator": "Successful external Pong health, homepage, and two-player journey observation",
       "evaluation_window": {
-        "start": "2026-07-27T17:00:00.000Z",
-        "end": "2026-08-26T16:00:00.000Z",
+        "start": "2026-07-27T20:00:00.000Z",
+        "end": "2026-08-26T19:00:00.000Z",
         "expected_slots": 720
       },
       "counts": {
         "expected_slots": 720,
-        "observed_slots": 295,
-        "good_slots": 294,
+        "observed_slots": 296,
+        "good_slots": 295,
         "bad_slots": 1,
-        "unknown_slots": 425,
+        "unknown_slots": 424,
         "duplicate_slots": 47,
         "invalid_records": 0
       },
-      "coverage_percent": 40.972222,
-      "sli_percent": 99.661017,
+      "coverage_percent": 41.111111,
+      "sli_percent": 99.662162,
       "error_budget": {
-        "allowed_bad_slots": 2.95,
+        "allowed_bad_slots": 2.96,
         "consumed_bad_slots": 1,
-        "consumed_percent": 33.898305,
-        "remaining_bad_slots": 1.95,
-        "remaining_percent": 66.101695
+        "consumed_percent": 33.783784,
+        "remaining_bad_slots": 1.96,
+        "remaining_percent": 66.216216
       },
-      "latest_evidence_timestamp": "2026-08-26T16:58:24.391Z",
+      "latest_evidence_timestamp": "2026-08-26T19:19:09.576Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/32991463633",
+        "https://github.com/macel94/belacca-status/actions/runs/33004490585",
         "https://github.com/macel94/belacca-status/tree/main/history#pong"
       ]
     },
@@ -126,37 +126,37 @@
       "cadence": "1h",
       "indicator": "Successful external HTTPS GET /status and same-origin /count requests",
       "evaluation_window": {
-        "start": "2026-07-27T17:00:00.000Z",
-        "end": "2026-08-26T16:00:00.000Z",
+        "start": "2026-07-27T20:00:00.000Z",
+        "end": "2026-08-26T19:00:00.000Z",
         "expected_slots": 720
       },
       "counts": {
         "expected_slots": 720,
-        "observed_slots": 333,
-        "good_slots": 332,
+        "observed_slots": 334,
+        "good_slots": 333,
         "bad_slots": 1,
-        "unknown_slots": 387,
+        "unknown_slots": 386,
         "duplicate_slots": 47,
         "invalid_records": 0
       },
-      "coverage_percent": 46.25,
-      "sli_percent": 99.6997,
+      "coverage_percent": 46.388889,
+      "sli_percent": 99.700599,
       "error_budget": {
-        "allowed_bad_slots": 3.33,
+        "allowed_bad_slots": 3.34,
         "consumed_bad_slots": 1,
-        "consumed_percent": 30.03003,
-        "remaining_bad_slots": 2.33,
-        "remaining_percent": 69.96997
+        "consumed_percent": 29.94012,
+        "remaining_bad_slots": 2.34,
+        "remaining_percent": 70.05988
       },
-      "latest_evidence_timestamp": "2026-08-26T16:58:24.391Z",
+      "latest_evidence_timestamp": "2026-08-26T19:19:09.576Z",
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/32991463633",
+        "https://github.com/macel94/belacca-status/actions/runs/33004490585",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics"
       ]
     }
   ],
   "source_references": [
-    "https://github.com/macel94/belacca-status/actions/runs/32991463633",
+    "https://github.com/macel94/belacca-status/actions/runs/33004490585",
     "https://github.com/macel94/belacca-status/tree/main/history#platform"
   ],
   "notes": [
