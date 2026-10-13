@@ -6,7 +6,7 @@
   "labelColor": "#555",
   "cacheSeconds": 300,
   "status": "operational",
-  "observedAt": "2026-10-13T11:45:22.355Z",
-  "validUntil": "2026-10-13T13:45:22.355Z",
-  "sourceReference": "https://github.com/macel94/belacca-status/actions/runs/38392377043"
+  "observedAt": "2026-10-13T19:15:04.453Z",
+  "validUntil": "2026-10-13T21:15:04.453Z",
+  "sourceReference": "https://github.com/macel94/belacca-status/actions/runs/38453318042"
 }
