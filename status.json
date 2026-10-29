@@ -5,14 +5,14 @@
   "publication_state": "published",
   "status": "operational",
   "summary": "All critical public checks are passing.",
-  "observation_id": "40916225594",
-  "observed_at": "2026-10-29T16:55:13.372Z",
-  "updated_at": "2026-10-29T16:55:13.372Z",
-  "evidence_timestamp": "2026-10-29T16:55:13.372Z",
-  "valid_until": "2026-10-29T18:55:13.372Z",
+  "observation_id": "40960823397",
+  "observed_at": "2026-10-29T21:48:38.758Z",
+  "updated_at": "2026-10-29T21:48:38.758Z",
+  "evidence_timestamp": "2026-10-29T21:48:38.758Z",
+  "valid_until": "2026-10-29T23:48:38.758Z",
   "publisher": {
     "name": "Belacca hourly status monitor",
-    "source_reference": "https://github.com/macel94/belacca-status/actions/runs/40916225594"
+    "source_reference": "https://github.com/macel94/belacca-status/actions/runs/40960823397"
   },
   "monitoring_policy": {
     "id": "belacca-status-hourly-v1",
@@ -31,7 +31,7 @@
     "observations": 5,
     "good_observations": 5,
     "bad_observations": 0,
-    "source_reference": "https://github.com/macel94/belacca-status/actions/runs/40916225594"
+    "source_reference": "https://github.com/macel94/belacca-status/actions/runs/40960823397"
   },
   "components": [
     {
@@ -40,10 +40,10 @@
       "critical": true,
       "status": "operational",
       "summary": "All configured external checks passed.",
-      "evidence_timestamp": "2026-10-29T16:55:13.372Z",
-      "duration_ms": 687,
+      "evidence_timestamp": "2026-10-29T21:48:38.758Z",
+      "duration_ms": 641,
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/40916225594",
+        "https://github.com/macel94/belacca-status/actions/runs/40960823397",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio-health",
         "https://github.com/macel94/belacca-status/tree/main/history#portfolio-homepage"
       ]
@@ -54,10 +54,10 @@
       "critical": true,
       "status": "operational",
       "summary": "All configured external checks passed.",
-      "evidence_timestamp": "2026-10-29T16:55:13.372Z",
-      "duration_ms": 72848,
+      "evidence_timestamp": "2026-10-29T21:48:38.758Z",
+      "duration_ms": 48809,
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/40916225594",
+        "https://github.com/macel94/belacca-status/actions/runs/40960823397",
         "https://github.com/macel94/belacca-status/tree/main/history#pong-health",
         "https://github.com/macel94/cloudnativepong/commit/a3f6ecc0c3f1704616f56611073f85f5661fb72e",
         "https://github.com/macel94/belacca-status/tree/main/history#pong-homepage",
@@ -70,10 +70,10 @@
       "critical": false,
       "status": "operational",
       "summary": "All configured external checks passed.",
-      "evidence_timestamp": "2026-10-29T16:55:13.372Z",
-      "duration_ms": 785,
+      "evidence_timestamp": "2026-10-29T21:48:38.758Z",
+      "duration_ms": 760,
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/40916225594",
+        "https://github.com/macel94/belacca-status/actions/runs/40960823397",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics-status",
         "https://github.com/macel94/belacca-status/tree/main/history#analytics-count"
       ]
@@ -84,10 +84,10 @@
       "critical": false,
       "status": "unknown",
       "summary": "Authenticated operator checks are not configured.",
-      "evidence_timestamp": "2026-10-29T16:55:13.372Z",
+      "evidence_timestamp": "2026-10-29T21:48:38.758Z",
       "duration_ms": 0,
       "source_references": [
-        "https://github.com/macel94/belacca-status/actions/runs/40916225594",
+        "https://github.com/macel94/belacca-status/actions/runs/40960823397",
         "https://github.com/macel94/belacca-status/tree/main/history#dashboard-authenticated",
         "https://github.com/macel94/belacca-status/tree/main/history#flux-authenticated"
       ]
@@ -95,7 +95,7 @@
   ],
   "incidents": [],
   "source_references": [
-    "https://github.com/macel94/belacca-status/actions/runs/40916225594",
+    "https://github.com/macel94/belacca-status/actions/runs/40960823397",
     "https://github.com/macel94/belacca-status/tree/main/history#platform"
   ],
   "notes": [
